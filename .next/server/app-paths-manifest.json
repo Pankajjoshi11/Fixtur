@@ -1,6 +1,3 @@
 {
-  "/page": "app/page.js",
-  "/cricket/admin/page": "app/cricket/admin/page.js",
-  "/api/scoring/sync/route": "app/api/scoring/sync/route.js",
-  "/cricket/live/page": "app/cricket/live/page.js"
+  "/page": "app/page.js"
 }
