@@ -288,7 +288,6 @@ export default function AdminScoringDashboard() {
   };
 
   const handleRun = (runs: number) => {
-    if (showOverModal || showInningsModal) return;
     store.recordDelivery({
       runs,
       extras: 0,
@@ -301,7 +300,6 @@ export default function AdminScoringDashboard() {
   };
 
   const handleExtra = (type: 'WIDE' | 'NO_BALL' | 'BYE' | 'LEG_BYE') => {
-    if (showOverModal || showInningsModal) return;
     store.recordDelivery({
       runs: 0,
       extras: 1,
@@ -315,7 +313,6 @@ export default function AdminScoringDashboard() {
   };
 
   const handleWicket = () => {
-    if (showOverModal || showInningsModal) return;
     store.recordDelivery({
       runs: 0,
       extras: 0,
@@ -654,14 +651,9 @@ export default function AdminScoringDashboard() {
                   <div className="text-6xl font-extrabold tracking-tighter text-emerald-400 mb-2">
                     {store.totalRuns} <span className="text-4xl text-slate-300 font-bold">/ {store.totalWickets}</span>
                   </div>
-                  <div className="text-xl text-slate-300 font-medium mb-2">
+                  <div className="text-xl text-slate-300 font-medium">
                     Overs: {store.overs}.{store.ballsInCurrentOver}
                   </div>
-                  {store.targetScore && (
-                    <div className="text-sm font-bold text-blue-400 uppercase tracking-wide bg-blue-900/20 py-2 rounded-md border border-blue-500/20 mt-2">
-                      Target: {store.targetScore}
-                    </div>
-                  )}
                 </div>
 
                 <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5 space-y-4">
@@ -803,57 +795,6 @@ export default function AdminScoringDashboard() {
 
                 {/* Voice Scoring Engine */}
                 <div className={`bg-zinc-900 border border-zinc-800 rounded-xl p-6 relative overflow-hidden ${showOverModal ? 'opacity-30 pointer-events-none' : ''}`}>
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 pointer-events-none" />
-                  <div className="flex items-center justify-between relative z-10">
-                    <div>
-                      <h3 className="text-lg font-semibold text-slate-200 flex items-center gap-2">
-                        Voice Scoring Engine
-                        {isListening && <span className="flex h-3 w-3 relative"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span></span>}
-                      </h3>
-                      <p className="text-sm text-slate-400 mt-1 max-w-sm">Say "One run", "Four runs", or "Out" to log events directly.</p>
-                      {transcript && (
-                        <div className="mt-3 p-2 bg-zinc-950 rounded border border-zinc-800 text-xs text-blue-400 italic">
-                          Heard: "{transcript}"
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      onClick={toggleVoiceScoring}
-                      className={`h-16 w-16 rounded-full flex items-center justify-center transition-all shadow-lg ${
-                        isListening 
-                          ? 'bg-blue-600 text-white shadow-blue-500/30 hover:bg-blue-500 animate-pulse' 
-                          : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'
-                      }`}
-                    >
-                      {isListening ? <Mic size={24} /> : <MicOff size={24} />}
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-} => handleExtra('LEG_BYE')} className="p-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm font-medium">Leg Bye (Lb)</button>
-                    </div>
-                  </div>
-
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col justify-center">
-                    <button 
-                      onClick={handleWicket}
-                      className="w-full py-6 rounded-lg bg-red-500/10 border border-red-500/30 text-red-500 hover:bg-red-500/20 flex flex-col items-center justify-center gap-2 transition-colors"
-                    >
-                      <ShieldAlert size={28} />
-                      <span className="font-bold text-xl tracking-wide uppercase">Wicket</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Voice Scoring Engine */}
-                <div className={`bg-zinc-900 border border-zinc-800 rounded-xl p-6 relative overflow-hidden ${showOverModal || showInningsModal ? 'opacity-30 pointer-events-none' : ''}`}>
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 pointer-events-none" />
                   <div className="flex items-center justify-between relative z-10">
                     <div>

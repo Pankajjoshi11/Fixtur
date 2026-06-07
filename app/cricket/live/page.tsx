@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useScoringStore } from '@/store/useScoringStore';
 import { getPusherClient } from '@/lib/pusher';
-import { Activity, Radio, Trophy, Users, ChevronRight, MapPin } from 'lucide-react';
+import { Activity, Radio, Trophy, ChevronRight, MapPin } from 'lucide-react';
 import Link from 'next/link';
 
 type ActiveMatchSummary = {
@@ -22,10 +22,20 @@ type ActiveMatchSummary = {
 };
 
 export default function LiveViewerDashboard() {
-  const store = useScoringStore();
   const [activeMatches, setActiveMatches] = useState<ActiveMatchSummary[]>([]);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Atomic Zustand selectors to guarantee fine-grained React re-renders
+  const totalRuns = useScoringStore((state) => state.totalRuns);
+  const totalWickets = useScoringStore((state) => state.totalWickets);
+  const overs = useScoringStore((state) => state.overs);
+  const ballsInCurrentOver = useScoringStore((state) => state.ballsInCurrentOver);
+  const deliveryHistory = useScoringStore((state) => state.deliveryHistory);
+  const strikerId = useScoringStore((state) => state.strikerId);
+  const nonStrikerId = useScoringStore((state) => state.nonStrikerId);
+  const meta = useScoringStore((state) => state.meta);
+  const setStateOverride = useScoringStore((state) => state.setStateOverride);
 
   // --- LOBBY: Fetch active matches & subscribe to global updates ---
   useEffect(() => {
@@ -35,7 +45,7 @@ export default function LiveViewerDashboard() {
         const data = await res.json();
         setActiveMatches(data.matches || []);
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching lobby matches:", err);
       } finally {
         setLoading(false);
       }
@@ -66,32 +76,43 @@ export default function LiveViewerDashboard() {
     const matchChannel = pusher.subscribe(`match-${selectedMatchId}`);
 
     matchChannel.bind('score-update', (serverState: any) => {
-      store.setStateOverride(serverState);
+      // Safely apply incoming live updates to global Zustand store
+      setStateOverride(serverState);
     });
 
     return () => {
       matchChannel.unbind('score-update');
       pusher.unsubscribe(`match-${selectedMatchId}`);
     };
-  }, [selectedMatchId]);
+  }, [selectedMatchId, setStateOverride]);
 
-  // Deriving individual statistics directly from synced delivery history
+  // --- CALCULATED STATISTICS ---
   const getBatsmanStats = (id: string | null) => {
-    if (!id) return { runs: 0, balls: 0 };
-    const runs = store.deliveryHistory
+    if (!id || !deliveryHistory) return { runs: 0, balls: 0 };
+    
+    const runs = deliveryHistory
       .filter(d => d.strikerId === id && !d.isWicket && !d.extraType?.includes('WIDE'))
       .reduce((sum, d) => sum + d.runs, 0);
-    const balls = store.deliveryHistory
+      
+    const balls = deliveryHistory
       .filter(d => d.strikerId === id && !d.extraType?.includes('WIDE'))
       .length;
+      
     return { runs, balls };
   };
 
   const getRecentDeliveries = () => {
-    return store.deliveryHistory.slice(-6).reverse(); // Last 6 deliveries
+    if (!deliveryHistory) return [];
+    return [...deliveryHistory].slice(-6).reverse(); // Defensive clone prior to reverse
   };
 
-  // --- RENDER LOBBY ---
+  const strikerStats = getBatsmanStats(strikerId);
+  const nonStrikerStats = getBatsmanStats(nonStrikerId);
+  
+  const totalBalls = (overs * 6) + ballsInCurrentOver;
+  const currentRunRate = totalBalls > 0 ? ((totalRuns / totalBalls) * 6).toFixed(2) : '0.00';
+
+  // --- RENDER LOBBY LAYOUT ---
   if (!selectedMatchId) {
     return (
       <div className="min-h-screen bg-zinc-950 text-slate-50 p-4 md:p-8 font-sans">
@@ -154,14 +175,7 @@ export default function LiveViewerDashboard() {
     );
   }
 
-  // --- RENDER MATCH VIEW ---
-  const strikerStats = getBatsmanStats(store.strikerId);
-  const nonStrikerStats = getBatsmanStats(store.nonStrikerId);
-  
-  // Calculating run rate
-  const totalBalls = store.overs * 6 + store.ballsInCurrentOver;
-  const currentRunRate = totalBalls > 0 ? (store.totalRuns / (totalBalls / 6)).toFixed(2) : '0.00';
-
+  // --- RENDER INDIVIDUAL MATCH SCORECARD VIEW ---
   return (
     <div className="min-h-screen bg-zinc-950 text-slate-50 p-4 md:p-8 font-sans">
       <header className="max-w-3xl mx-auto mb-6">
@@ -175,31 +189,31 @@ export default function LiveViewerDashboard() {
 
       <main className="max-w-3xl mx-auto space-y-6">
         
-        {/* Google-like Scorecard Header */}
+        {/* Dynamic Header */}
         <div className="bg-gradient-to-br from-zinc-900 to-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl relative">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-blue-500"></div>
           
           <div className="p-6 md:p-8">
             <div className="flex justify-between items-center mb-6">
               <span className="text-xs font-bold bg-red-500 text-white px-2 py-1 rounded animate-pulse tracking-widest uppercase">Live</span>
-              <span className="text-xs text-slate-400 uppercase tracking-widest">{store.meta?.tournament || 'Match Center'}</span>
+              <span className="text-xs text-slate-400 uppercase tracking-widest">{meta?.tournament || 'Match Center'}</span>
             </div>
 
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="text-center md:text-left flex-1">
-                <h2 className="text-2xl md:text-3xl font-bold text-slate-200">{store.meta?.teamA || 'Team A'}</h2>
+                <h2 className="text-2xl md:text-3xl font-bold text-slate-200">{meta?.teamA || 'Team A'}</h2>
               </div>
               
               <div className="text-center flex-none">
                 <div className="text-5xl md:text-6xl font-black tracking-tighter text-white drop-shadow-md">
-                  {store.totalRuns}<span className="text-3xl md:text-4xl text-slate-300">/{store.totalWickets}</span>
+                  {totalRuns}<span className="text-3xl md:text-4xl text-slate-300">/{totalWickets}</span>
                 </div>
-                <div className="text-lg text-emerald-400 font-medium mt-1">Overs {store.overs}.{store.ballsInCurrentOver}</div>
+                <div className="text-lg text-emerald-400 font-medium mt-1">Overs {overs}.{ballsInCurrentOver}</div>
                 <div className="text-xs text-slate-500 mt-2 font-mono">CRR: {currentRunRate}</div>
               </div>
 
               <div className="text-center md:text-right flex-1">
-                <h2 className="text-2xl md:text-3xl font-bold text-slate-400">{store.meta?.teamB || 'Team B'}</h2>
+                <h2 className="text-2xl md:text-3xl font-bold text-slate-400">{meta?.teamB || 'Team B'}</h2>
                 <div className="text-xs text-slate-500 mt-2">Yet to bat</div>
               </div>
             </div>
@@ -217,7 +231,7 @@ export default function LiveViewerDashboard() {
                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500"></div>
                    <div className="pl-2">
                      <div className="font-bold text-slate-200 flex items-center gap-2">
-                       {store.meta?.strikerName || 'Striker'} 
+                       {meta?.strikerName || 'Striker'} 
                        <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">*</span>
                      </div>
                    </div>
@@ -228,7 +242,7 @@ export default function LiveViewerDashboard() {
                 </div>
 
                 <div className="flex justify-between items-center p-3">
-                   <div className="font-medium text-slate-400">{store.meta?.nonStrikerName || 'Non-Striker'}</div>
+                   <div className="font-medium text-slate-400">{meta?.nonStrikerName || 'Non-Striker'}</div>
                    <div className="text-right">
                      <span className="text-lg font-bold text-slate-300">{nonStrikerStats.runs}</span>
                      <span className="text-xs text-slate-500 ml-1">({nonStrikerStats.balls})</span>
@@ -244,7 +258,7 @@ export default function LiveViewerDashboard() {
                  <span>Bowler</span>
                </h3>
                <div className="flex justify-between items-center p-3 bg-zinc-950/50 rounded-lg border border-zinc-800/50">
-                  <div className="font-bold text-slate-200">{store.meta?.bowlerName || 'Bowler'}</div>
+                  <div className="font-bold text-slate-200">{meta?.bowlerName || 'Bowler'}</div>
                   <Activity size={16} className="text-emerald-500" />
                </div>
             </div>
@@ -275,7 +289,7 @@ export default function LiveViewerDashboard() {
                         <div key={idx} className={`w-8 h-8 rounded-full flex items-center justify-center text-xs border border-zinc-700 ${style}`}>
                            {label}
                         </div>
-                      )
+                      );
                     })
                  )}
                </div>
