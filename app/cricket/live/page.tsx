@@ -26,7 +26,7 @@ export default function LiveViewerDashboard() {
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Atomic Zustand selectors to guarantee fine-grained React re-renders
+  // Atomic Zustand selectors
   const totalRuns = useScoringStore((state) => state.totalRuns);
   const totalWickets = useScoringStore((state) => state.totalWickets);
   const overs = useScoringStore((state) => state.overs);
@@ -66,25 +66,74 @@ export default function LiveViewerDashboard() {
     };
   }, []);
 
-  // --- MATCH VIEW: Subscribe to specific match updates ---
+  // --- MATCH VIEW: Fetch initial state AND subscribe to updates ---
   useEffect(() => {
     if (!selectedMatchId) return;
 
+    // 1. INSTANT HYDRATION: Seed the store with Lobby data
+    const matchSummary = activeMatches.find(m => m.matchId === selectedMatchId);
+    if (matchSummary) {
+      setStateOverride({
+        totalRuns: matchSummary.totalRuns,
+        totalWickets: matchSummary.totalWickets,
+        overs: matchSummary.overs,
+        ballsInCurrentOver: matchSummary.ballsInCurrentOver,
+        meta: {
+          teamA: matchSummary.teamA || 'Team A',
+          teamB: matchSummary.teamB || 'Team B',
+          tournament: matchSummary.tournament || '',
+          strikerName: matchSummary.strikerName || 'Striker',
+          nonStrikerName: matchSummary.nonStrikerName || 'Non-Striker',
+          bowlerName: matchSummary.bowlerName || 'Bowler'
+        }
+      });
+    }
+
+    // 2. FETCH FULL STATE: Grab delivery history & full Zustand state from backend
+    const fetchCurrentMatchState = async () => {
+      try {
+        const res = await fetch(`/api/scoring/${selectedMatchId}`); 
+        if (res.ok) {
+          const data = await res.json();
+          
+          // CRITICAL FIX: Explicitly extract both state AND meta, no matter how the backend nested it.
+          const backendState = data.state ? data.state : data;
+          const backendMeta = data.meta ? data.meta : backendState.meta;
+          
+          setStateOverride({
+            ...backendState,
+            meta: backendMeta
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch initial match state:", error);
+      }
+    };
+
+    fetchCurrentMatchState();
+
+    // 3. PUSHER: Subscribe for live ball-by-ball updates
     const pusher = getPusherClient();
     if (!pusher) return;
     
     const matchChannel = pusher.subscribe(`match-${selectedMatchId}`);
 
     matchChannel.bind('score-update', (serverState: any) => {
-      // Safely apply incoming live updates to global Zustand store
-      setStateOverride(serverState);
+      // Apply the exact same logic for live Pusher updates
+      const newState = serverState.state ? serverState.state : serverState;
+      const newMeta = serverState.meta ? serverState.meta : newState.meta;
+      
+      setStateOverride({
+        ...newState,
+        meta: newMeta
+      });
     });
 
     return () => {
       matchChannel.unbind('score-update');
       pusher.unsubscribe(`match-${selectedMatchId}`);
     };
-  }, [selectedMatchId, setStateOverride]);
+  }, [selectedMatchId, activeMatches, setStateOverride]);
 
   // --- CALCULATED STATISTICS ---
   const getBatsmanStats = (id: string | null) => {
@@ -103,7 +152,7 @@ export default function LiveViewerDashboard() {
 
   const getRecentDeliveries = () => {
     if (!deliveryHistory) return [];
-    return [...deliveryHistory].slice(-6).reverse(); // Defensive clone prior to reverse
+    return [...deliveryHistory].slice(-6).reverse(); 
   };
 
   const strikerStats = getBatsmanStats(strikerId);
@@ -188,7 +237,6 @@ export default function LiveViewerDashboard() {
       </header>
 
       <main className="max-w-3xl mx-auto space-y-6">
-        
         {/* Dynamic Header */}
         <div className="bg-gradient-to-br from-zinc-900 to-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl relative">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-blue-500"></div>

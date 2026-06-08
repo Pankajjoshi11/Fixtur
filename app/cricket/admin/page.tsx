@@ -63,8 +63,14 @@ export default function AdminScoringDashboard() {
   const [showWicketModal, setShowWicketModal] = useState(false);
   const [newBatsmanId, setNewBatsmanId] = useState('');
 
-  // --- HANDLERS ---
+  // --- HELPER DEFINITIONS (Moved up to be accessible to handlers) ---
+  const renderPlayerName = (id: string | null) => {
+    if (!id || !activeMatch) return 'Unknown';
+    const player = [...activeMatch.teamA.players, ...activeMatch.teamB.players].find(p => p.id === id);
+    return player ? player.name : id;
+  };
 
+  // --- HANDLERS ---
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,12 +171,20 @@ export default function AdminScoringDashboard() {
     e.preventDefault();
     if (!activeMatch || !openingStrikerId || !openingNonStrikerId || !openingBowlerId) return;
     
-    // Initialize Zustand Store
+    // Initialize Zustand Store with meta names
     store.initializeMatch(activeMatch.id);
     store.setStateOverride({
       strikerId: openingStrikerId,
       nonStrikerId: openingNonStrikerId,
       bowlerId: openingBowlerId,
+      meta: {
+        teamA: activeMatch.teamA.shortName,
+        teamB: activeMatch.teamB.shortName,
+        tournament: tournament.name,
+        strikerName: renderPlayerName(openingStrikerId),
+        nonStrikerName: renderPlayerName(openingNonStrikerId),
+        bowlerName: renderPlayerName(openingBowlerId)
+      },
       overs: 0,
       ballsInCurrentOver: 0,
       totalRuns: 0,
@@ -195,20 +209,13 @@ export default function AdminScoringDashboard() {
           body: JSON.stringify({ 
             matchId: store.matchId, 
             state: store,
-            meta: {
-              teamA: activeMatch?.teamA.shortName,
-              teamB: activeMatch?.teamB.shortName,
-              tournament: tournament.name,
-              strikerName: renderPlayerName(store.strikerId),
-              nonStrikerName: renderPlayerName(store.nonStrikerId),
-              bowlerName: renderPlayerName(store.bowlerId)
-            }
+            meta: store.meta // Use the meta directly from the store now
           })
         });
       } catch (err) {}
     };
     syncState();
-  }, [store.totalRuns, store.totalWickets, store.overs, store.ballsInCurrentOver, store.deliveryHistory.length, step, store, activeMatch, tournament]);
+  }, [store.totalRuns, store.totalWickets, store.overs, store.ballsInCurrentOver, store.deliveryHistory.length, step, store.meta, store, activeMatch, tournament]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
@@ -272,7 +279,14 @@ export default function AdminScoringDashboard() {
     store.setStateOverride({
       bowlerId: nextBowlerId,
       strikerId: nextStrikerId,
-      nonStrikerId: nextNonStrikerId
+      nonStrikerId: nextNonStrikerId,
+      // Update meta so Live Viewer catches the new names instantly
+      meta: {
+        ...store.meta,
+        bowlerName: renderPlayerName(nextBowlerId),
+        strikerName: renderPlayerName(nextStrikerId),
+        nonStrikerName: renderPlayerName(nextNonStrikerId)
+      }
     });
     setShowOverModal(false);
   };
@@ -282,7 +296,14 @@ export default function AdminScoringDashboard() {
     store.setStateOverride({
       strikerId: nextStrikerId,
       nonStrikerId: nextNonStrikerId,
-      bowlerId: nextBowlerId
+      bowlerId: nextBowlerId,
+      // Update meta for the new innings
+      meta: {
+        ...store.meta,
+        bowlerName: renderPlayerName(nextBowlerId),
+        strikerName: renderPlayerName(nextStrikerId),
+        nonStrikerName: renderPlayerName(nextNonStrikerId)
+      }
     });
     setShowInningsModal(false);
   };
@@ -329,7 +350,12 @@ export default function AdminScoringDashboard() {
   const handleNextBatsmanSetup = () => {
     if (!newBatsmanId) return;
     store.setStateOverride({
-      strikerId: newBatsmanId // replace striker with new batsman by default for simplicity
+      strikerId: newBatsmanId,
+      // Update meta for the new batsman
+      meta: {
+        ...store.meta,
+        strikerName: renderPlayerName(newBatsmanId)
+      }
     });
     setNewBatsmanId('');
     setShowWicketModal(false);
@@ -346,6 +372,7 @@ export default function AdminScoringDashboard() {
 
     return store.currentInning === 1 ? firstInningBatting : firstInningBowling;
   };
+
   const getBowlingTeam = () => {
     if (!activeMatch) return null;
     let firstInningBatting = tossDecision === 'BAT' 
@@ -359,12 +386,6 @@ export default function AdminScoringDashboard() {
 
   const battingTeam = getBattingTeam();
   const bowlingTeam = getBowlingTeam();
-
-  const renderPlayerName = (id: string | null) => {
-    if (!id || !activeMatch) return 'Unknown';
-    const player = [...activeMatch.teamA.players, ...activeMatch.teamB.players].find(p => p.id === id);
-    return player ? player.name : id;
-  };
 
   const getBatsmanStats = (id: string | null) => {
     if (!id) return { runs: 0, balls: 0 };
