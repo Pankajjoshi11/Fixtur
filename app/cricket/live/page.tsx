@@ -5,6 +5,7 @@ import { useScoringStore } from '@/store/useScoringStore';
 import { getPusherClient } from '@/lib/pusher';
 import { Activity, Radio, Trophy, ChevronRight, MapPin } from 'lucide-react';
 import Link from 'next/link';
+import LiveScorecard from '../admin/components/LiveScorecard';
 
 type ActiveMatchSummary = {
   matchId: string;
@@ -25,6 +26,8 @@ export default function LiveViewerDashboard() {
   const [activeMatches, setActiveMatches] = useState<ActiveMatchSummary[]>([]);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [battingTeam, setBattingTeam] = useState<any>(null);
+  const [bowlingTeam, setBowlingTeam] = useState<any>(null);
 
   // Atomic Zustand selectors
   const totalRuns = useScoringStore((state) => state.totalRuns);
@@ -104,6 +107,9 @@ export default function LiveViewerDashboard() {
             ...backendState,
             meta: backendMeta
           });
+          
+          if (data.battingTeam) setBattingTeam(data.battingTeam);
+          if (data.bowlingTeam) setBowlingTeam(data.bowlingTeam);
         }
       } catch (error) {
         console.error("Failed to fetch initial match state:", error);
@@ -127,6 +133,9 @@ export default function LiveViewerDashboard() {
         ...newState,
         meta: newMeta
       });
+      
+      if (serverState.battingTeam) setBattingTeam(serverState.battingTeam);
+      if (serverState.bowlingTeam) setBowlingTeam(serverState.bowlingTeam);
     });
 
     return () => {
@@ -345,6 +354,15 @@ export default function LiveViewerDashboard() {
           </div>
 
         </div>
+
+        {/* Detailed Live Scorecard */}
+        <LiveScorecard 
+          deliveries={deliveryHistory?.filter(d => d.inning === useScoringStore.getState().currentInning) || []}
+          battingTeam={battingTeam} 
+          bowlingTeam={bowlingTeam} 
+          currentStrikerId={strikerId}
+          currentNonStrikerId={nonStrikerId}
+        />
 
       </main>
     </div>

@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { pusherServer } from '@/lib/pusher';
-
-// In-memory store for active matches to easily populate the Live Viewer lobby
-const activeMatches = new Map();
+import { activeMatches, matchStates } from '@/lib/store';
 
 export async function GET() {
   return NextResponse.json({ matches: Array.from(activeMatches.values()) });
@@ -11,7 +9,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { matchId, state, meta } = body;
+    const { matchId, state, meta, battingTeam, bowlingTeam } = body;
 
     if (!matchId || !state) {
       return new NextResponse("Missing matchId or state", { status: 400 });
@@ -33,8 +31,23 @@ export async function POST(req: Request) {
       lastUpdated: Date.now(),
     });
 
+    // Save full state for direct polling via /api/scoring/[matchId]
+    matchStates.set(matchId, {
+      state,
+      meta,
+      battingTeam: battingTeam || null,
+      bowlingTeam: bowlingTeam || null,
+      lastUpdated: Date.now(),
+    });
+
     // Trigger a Pusher event on the match-specific channel
-    await pusherServer.trigger(`match-${matchId}`, 'score-update', state);
+    // Include full data in the push so viewers get it instantly
+    await pusherServer.trigger(`match-${matchId}`, 'score-update', {
+      state,
+      meta,
+      battingTeam,
+      bowlingTeam
+    });
     
     // Trigger global update for the lobby
     await pusherServer.trigger(`global-lobby`, 'matches-update', Array.from(activeMatches.values()));

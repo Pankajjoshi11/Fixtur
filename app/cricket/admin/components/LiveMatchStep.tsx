@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Match, Team } from '../types';
 import { Activity, RotateCcw, Zap, ShieldAlert, Mic, MicOff } from 'lucide-react';
 import { useScoringStore } from '@/store/useScoringStore';
+import LiveScorecard from './LiveScorecard';
 
 interface LiveMatchStepProps {
   activeMatch: Match | null;
@@ -43,7 +44,9 @@ export default function LiveMatchStep({ activeMatch, tournament, battingTeam, bo
           body: JSON.stringify({ 
             matchId: store.matchId, 
             state: store,
-            meta: store.meta 
+            meta: store.meta,
+            battingTeam,
+            bowlingTeam
           })
         });
       } catch (err) {}
@@ -447,6 +450,15 @@ export default function LiveMatchStep({ activeMatch, tournament, battingTeam, bo
 
         </div>
       </div>
+
+      {/* Detailed Live Scorecard */}
+      <LiveScorecard 
+        deliveries={store.deliveryHistory.filter(d => d.inning === store.currentInning)}
+        battingTeam={battingTeam}
+        bowlingTeam={bowlingTeam}
+        currentStrikerId={store.strikerId}
+        currentNonStrikerId={store.nonStrikerId}
+      />
     </>
   );
 }
