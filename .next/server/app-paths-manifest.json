@@ -1,6 +1,0 @@
-{
-  "/_not-found/page": "app/_not-found/page.js",
-  "/cricket/live/page": "app/cricket/live/page.js",
-  "/cricket/admin/page": "app/cricket/admin/page.js",
-  "/api/scoring/sync/route": "app/api/scoring/sync/route.js"
-}
