@@ -1,104 +1,102 @@
-'use client';
+import { Trophy, Shield, ArrowRight, Sparkles, Activity } from "lucide-react"
+import Link from "next/link"
 
-import Link from 'next/link';
-import { ArrowRight, Trophy, Sparkles, ShieldCheck } from 'lucide-react';
-
-export default function SportSelectionHub() {
+export default function Page() {
   return (
-    <main className="relative min-h-screen bg-[#030303] text-slate-50 flex flex-col items-center justify-center p-6 md:p-24 overflow-hidden font-sans select-none w-full">
-      
-      {/* Background Layering: Pure Subtle Grid Matrix matching the image */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#0b0b0e_1px,transparent_1px),linear-gradient(to_bottom,#0b0b0e_1px,transparent_1px)] bg-[size:3rem_3rem] -z-20 pointer-events-none opacity-80"></div>
-      
-      {/* Deep Amethyst Dark Ambient Glow centered behind title */}
-      <div className="absolute top-[35%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-purple-600/5 rounded-full blur-[140px] pointer-events-none -z-10"></div>
+    <main className="relative min-h-screen overflow-hidden bg-[#0a0710] text-white">
+      {/* Subtle grid background */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-[0.18]"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.08) 1px, transparent 1px)",
+          backgroundSize: "64px 64px",
+        }}
+      />
+      {/* Purple radial glow */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-0 h-[600px] w-[900px] -translate-x-1/2 rounded-full opacity-40 blur-3xl"
+        style={{
+          background:
+            "radial-gradient(closest-side, rgba(124,58,237,0.35), rgba(124,58,237,0.08), transparent)",
+        }}
+      />
 
-      <div className="max-w-4xl w-full space-y-7 text-center relative z-10 flex flex-col items-center mx-auto">
-        
-        {/* Top Feature Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#08080a] border border-zinc-800/80 text-[10px] font-bold uppercase tracking-widest text-zinc-400 shadow-md">
-          <Sparkles size={11} className="text-purple-400 animate-pulse" />
-          <span>Version 2026 Live Deployment</span>
+      <div className="relative z-10 mx-auto flex max-w-6xl flex-col items-center px-6 pb-24 pt-12">
+        {/* Badge */}
+        <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2">
+          <Sparkles className="h-3.5 w-3.5 text-violet-400" />
+          <span className="text-xs font-semibold tracking-[0.2em] text-white/80">
+            VERSION 2026 LIVE DEPLOYMENT
+          </span>
         </div>
 
-        {/* Hero Copy Deck */}
-        <div className="space-y-4 max-w-2xl mx-auto pt-1">
-          <h1 className="text-7xl md:text-8xl font-black tracking-tighter text-white select-none pr-1">
-            Fixtur<span className="text-[#a855f7] drop-shadow-[0_0_25px_rgba(168,85,247,0.65)] font-black">.</span>
-          </h1>
-          <p className="text-sm md:text-base text-zinc-400 max-w-lg mx-auto font-normal leading-relaxed tracking-normal opacity-75">
-            A unified broadcast-grade operating layer for cricket, football and every fixture in between. Select a sport engine to enter the control deck.
-          </p>
-        </div>
+        {/* Wordmark */}
+        <h1 className="mt-16 text-center text-[8rem] font-extrabold leading-none tracking-tighter md:text-[11rem]">
+          <span className="text-white">Fixtur</span>
+          <span className="text-violet-500">.</span>
+        </h1>
 
-        {/* Dynamic Card Selection Matrix Layout */}
-        <div className="flex flex-col md:flex-row items-stretch justify-center gap-6 mt-12 w-full max-w-[56rem] mx-auto px-2 md:px-0">
+        {/* Subtitle */}
+        <p className="mt-8 max-w-2xl text-center text-lg leading-relaxed text-white/55">
+          A unified broadcast-grade operating layer for cricket, football and
+          every fixture in between. Select a sport engine to enter the control
+          deck.
+        </p>
+
+        {/* Cards */}
+        <div className="mt-16 grid w-full grid-cols-1 gap-6 md:grid-cols-2">
           
-          {/* Cricket Card Gateway */}
-          <Link href="/cricket" className="group relative block w-full md:w-1/2 text-left max-w-md mx-auto md:mx-0">
-            <div className="h-full flex flex-col justify-between rounded-2xl border border-zinc-900/60 bg-[#050507] p-8 transition-all duration-300 hover:border-purple-900/50 hover:bg-[#07070b] shadow-2xl shadow-black">
-              
-              <div>
-                <div className="flex justify-between items-center mb-8">
-                  <div className="w-10 h-10 rounded-xl bg-[#08080b] border border-zinc-800/50 flex items-center justify-center text-purple-400 shadow-inner">
-                    <Trophy size={16} />
-                  </div>
-                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-purple-400 bg-purple-950/20 border border-purple-900/40 px-3 py-1 rounded-full">
-                    Core Engine
-                  </span>
-                </div>
-
-                <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">
-                  Cricket
-                </h2>
-                <p className="text-zinc-400 text-sm font-normal leading-relaxed opacity-75">
-                  Voice-driven live scoring, ball-by-ball telemetry, and tournament orchestration.
-                </p>
+          {/* Cricket - Now a clickable Link */}
+          <Link 
+            href="/cricket/live"
+            className="group relative block rounded-2xl border border-white/10 bg-[#100c18]/80 p-8 transition-colors hover:border-violet-500/40"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-violet-500/30 bg-violet-500/15">
+                <Trophy className="h-6 w-6 text-violet-300" />
               </div>
-              
-              <div className="flex items-center text-zinc-300 font-semibold text-xs tracking-wide mt-14 group-hover:text-purple-400 transition-colors gap-1.5">
-                <span>Enter live deck</span>
-                <ArrowRight className="w-4 h-4 transition-transform transform group-hover:translate-x-1" />
-              </div>
+              <span className="rounded-full border border-violet-500/40 bg-violet-500/15 px-3 py-1 text-[11px] font-bold tracking-wider text-violet-300">
+                CORE ENGINE
+              </span>
+            </div>
+            <h2 className="mt-10 text-4xl font-bold tracking-tight">Cricket</h2>
+            <p className="mt-4 max-w-md leading-relaxed text-white/50">
+              Voice-driven live scoring, ball-by-ball telemetry, and tournament
+              orchestration.
+            </p>
+            <div className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-white/90 transition-colors group-hover:text-violet-300">
+              Enter live deck
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </div>
           </Link>
 
-          {/* Football Card Gateway */}
-          <div className="relative block w-full md:w-1/2 text-left max-w-md mx-auto md:mx-0 opacity-95">
-            <div className="h-full flex flex-col justify-between rounded-2xl border border-zinc-900/60 bg-[#050507] p-8 shadow-2xl shadow-black">
-              
-              <div>
-                <div className="flex justify-between items-center mb-8">
-                  <div className="w-10 h-10 rounded-xl bg-[#08080b] border border-zinc-800/50 flex items-center justify-center text-zinc-500 shadow-inner">
-                    <ShieldCheck size={16} />
-                  </div>
-                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-zinc-500 bg-zinc-900/40 border border-zinc-800/60 px-3 py-1 rounded-full">
-                    In Development
-                  </span>
-                </div>
-
-                <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">
-                  Football
-                </h2>
-                <p className="text-zinc-400 text-sm font-normal leading-relaxed opacity-75">
-                  Match cards, lineup automations and live event ingestion. Shipping soon.
-                </p>
+          {/* Football */}
+          <article className="relative rounded-2xl border border-white/10 bg-[#0d0a13]/80 p-8">
+            <div className="flex items-start justify-between">
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
+                <Shield className="h-6 w-6 text-white/60" />
               </div>
-              
-              <div className="flex items-center text-zinc-500 font-medium tracking-wide mt-14">
-                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-zinc-400">
-                  <svg className="w-3.5 h-3.5 text-zinc-500 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  <span>Engine warming up</span>
-                </div>
-              </div>
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-bold tracking-wider text-white/50">
+                IN DEVELOPMENT
+              </span>
             </div>
-          </div>
-
+            <h2 className="mt-10 text-4xl font-bold tracking-tight text-white/85">
+              Football
+            </h2>
+            <p className="mt-4 max-w-md leading-relaxed text-white/45">
+              Match cards, lineup automations and live event ingestion. Shipping
+              soon.
+            </p>
+            <div className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-white/40">
+              <Activity className="h-4 w-4" />
+              Engine warming up
+            </div>
+          </article>
         </div>
-
       </div>
     </main>
-  );
+  )
 }
