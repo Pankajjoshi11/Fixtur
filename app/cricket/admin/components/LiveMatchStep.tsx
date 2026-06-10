@@ -21,6 +21,7 @@ export default function LiveMatchStep({ activeMatch, tournament, battingTeam, bo
   
   const [showOverModal, setShowOverModal] = useState(false);
   const [showInningsModal, setShowInningsModal] = useState(false);
+  const [showMatchCompleteModal, setShowMatchCompleteModal] = useState(false);
   const [nextBowlerId, setNextBowlerId] = useState('');
   const [nextStrikerId, setNextStrikerId] = useState('');
   const [nextNonStrikerId, setNextNonStrikerId] = useState('');
@@ -100,13 +101,26 @@ export default function LiveMatchStep({ activeMatch, tournament, battingTeam, bo
             setShowOverModal(false);
          }
       } else if (store.currentInning === 2 && (isOversFinished || isAllOut || (store.targetScore && store.totalRuns >= store.targetScore))) {
-         if (isOverComplete && lastDelivery && lastDelivery.isLegalDelivery && !isOversFinished && !isAllOut) {
-            setShowOverModal(true);
+         if (!showMatchCompleteModal && !store.matchVerdict) {
+            let verdict = '';
+            if (store.targetScore && store.totalRuns >= store.targetScore) {
+               const wicketsLeft = 10 - store.totalWickets;
+               verdict = `${battingTeam?.name || 'Batting Team'} won by ${wicketsLeft} wicket${wicketsLeft !== 1 ? 's' : ''}`;
+            } else if (store.totalRuns === (store.targetScore ? store.targetScore - 1 : 0) && (isOversFinished || isAllOut)) {
+               verdict = `Match Tied`;
+            } else if (isOversFinished || isAllOut) {
+               const runsShort = (store.targetScore ? store.targetScore - 1 : 0) - store.totalRuns;
+               verdict = `${bowlingTeam?.name || 'Bowling Team'} won by ${runsShort} run${runsShort !== 1 ? 's' : ''}`;
+            }
+            
+            store.setStateOverride({ matchVerdict: verdict });
+            setShowMatchCompleteModal(true);
+            setShowOverModal(false);
          }
       } else if (isOverComplete && lastDelivery && lastDelivery.isLegalDelivery && !isOversFinished && !isAllOut) {
          setShowOverModal(true);
       }
-  }, [store.overs, store.ballsInCurrentOver, store.deliveryHistory, store.totalWickets, store.totalRuns, tournament.overs, store.currentInning, showInningsModal, store.targetScore]);
+  }, [store.overs, store.ballsInCurrentOver, store.deliveryHistory, store.totalWickets, store.totalRuns, tournament.overs, store.currentInning, showInningsModal, store.targetScore, showMatchCompleteModal, store.matchVerdict, battingTeam, bowlingTeam]);
 
   const handleNextOverSetup = () => {
     store.setStateOverride({
@@ -238,6 +252,9 @@ export default function LiveMatchStep({ activeMatch, tournament, battingTeam, bo
             </div>
             <div className="text-xl text-slate-300 font-medium">
               Overs: {store.overs}.{store.ballsInCurrentOver}
+              {store.currentInning === 2 && store.targetScore && (
+                <span className="ml-4 text-emerald-400">Target: {store.targetScore}</span>
+              )}
             </div>
           </div>
 
@@ -376,8 +393,38 @@ export default function LiveMatchStep({ activeMatch, tournament, battingTeam, bo
             </div>
           )}
 
+          {/* Match Completion Modal Overlay */}
+          {showMatchCompleteModal && (
+            <div className="absolute inset-0 z-50 bg-zinc-950/90 backdrop-blur-sm rounded-xl border border-zinc-800 p-8 flex flex-col justify-center animate-fade-in-up">
+              <h2 className="text-3xl font-bold text-emerald-400 mb-4 text-center">Match Completed</h2>
+              <div className="space-y-6 max-w-sm mx-auto w-full text-center">
+                <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 shadow-inner">
+                  <div className="text-xl font-bold text-slate-100 mb-2">{store.matchVerdict}</div>
+                  
+                  {store.firstInningScore && (
+                     <div className="text-sm text-slate-400 mt-4 flex justify-between px-2">
+                        <span>1st Inning:</span>
+                        <span className="font-semibold text-slate-200">{store.firstInningScore.runs}/{store.firstInningScore.wickets} <span className="text-xs text-slate-500">({store.firstInningScore.overs}.{store.firstInningScore.balls})</span></span>
+                     </div>
+                  )}
+                  <div className="text-sm text-slate-400 mt-2 flex justify-between px-2 border-t border-zinc-800 pt-2">
+                     <span>2nd Inning:</span>
+                     <span className="font-semibold text-slate-200">{store.totalRuns}/{store.totalWickets} <span className="text-xs text-slate-500">({store.overs}.{store.ballsInCurrentOver})</span></span>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={onExit}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded transition-colors"
+                >
+                  Exit to Schedule
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Runs Pad */}
-          <div className={`bg-zinc-900 border border-zinc-800 rounded-xl p-6 ${showOverModal || showInningsModal ? 'opacity-30 pointer-events-none' : ''}`}>
+          <div className={`bg-zinc-900 border border-zinc-800 rounded-xl p-6 ${showOverModal || showInningsModal || showMatchCompleteModal ? 'opacity-30 pointer-events-none' : ''}`}>
             <h3 className="text-lg font-semibold text-slate-200 mb-4">Runs</h3>
             <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
               {[0, 1, 2, 3, 4, 6].map((run) => (
@@ -397,7 +444,7 @@ export default function LiveMatchStep({ activeMatch, tournament, battingTeam, bo
           </div>
 
           {/* Extras & Wickets */}
-          <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${showOverModal || showInningsModal ? 'opacity-30 pointer-events-none' : ''}`}>
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${showOverModal || showInningsModal || showMatchCompleteModal ? 'opacity-30 pointer-events-none' : ''}`}>
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-slate-200 mb-4">Extras</h3>
               <div className="grid grid-cols-2 gap-3">
@@ -420,7 +467,7 @@ export default function LiveMatchStep({ activeMatch, tournament, battingTeam, bo
           </div>
 
           {/* Voice Scoring Engine */}
-          <div className={`bg-zinc-900 border border-zinc-800 rounded-xl p-6 relative overflow-hidden ${showOverModal || showInningsModal ? 'opacity-30 pointer-events-none' : ''}`}>
+          <div className={`bg-zinc-900 border border-zinc-800 rounded-xl p-6 relative overflow-hidden ${showOverModal || showInningsModal || showMatchCompleteModal ? 'opacity-30 pointer-events-none' : ''}`}>
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 pointer-events-none" />
             <div className="flex items-center justify-between relative z-10">
               <div>

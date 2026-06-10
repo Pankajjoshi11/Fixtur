@@ -26,6 +26,8 @@ interface ScoringState {
   nonStrikerId: string | null;
   bowlerId: string | null;
   targetScore: number | null;
+  firstInningScore: { runs: number; wickets: number; overs: number; balls: number } | null;
+  matchVerdict: string | null;
   
   meta?: {
     teamA?: string;
@@ -59,6 +61,8 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
   nonStrikerId: null,
   bowlerId: null,
   targetScore: null,
+  firstInningScore: null,
+  matchVerdict: null,
   deliveryHistory: [],
 
   setStateOverride: (newState) => set((state) => ({ ...state, ...newState })),
@@ -67,6 +71,8 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
     matchId, 
     currentInning: 1, 
     targetScore: null,
+    firstInningScore: null,
+    matchVerdict: null,
     totalRuns: 0,
     totalWickets: 0,
     overs: 0,
@@ -77,6 +83,12 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
   switchInnings: () => set((state) => ({
     currentInning: 2,
     targetScore: state.totalRuns + 1,
+    firstInningScore: {
+      runs: state.totalRuns,
+      wickets: state.totalWickets,
+      overs: state.overs,
+      balls: state.ballsInCurrentOver
+    },
     totalRuns: 0,
     totalWickets: 0,
     overs: 0,

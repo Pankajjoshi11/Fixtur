@@ -38,7 +38,18 @@ export default function LiveViewerDashboard() {
   const strikerId = useScoringStore((state) => state.strikerId);
   const nonStrikerId = useScoringStore((state) => state.nonStrikerId);
   const meta = useScoringStore((state) => state.meta);
+  const currentInning = useScoringStore((state) => state.currentInning);
+  const firstInningScore = useScoringStore((state) => state.firstInningScore);
+  const matchVerdict = useScoringStore((state) => state.matchVerdict);
+  const targetScore = useScoringStore((state) => state.targetScore);
   const setStateOverride = useScoringStore((state) => state.setStateOverride);
+
+  const [activeTab, setActiveTab] = useState<1 | 2>(1);
+
+  // Automatically switch tab to current inning when it changes
+  useEffect(() => {
+    setActiveTab(currentInning);
+  }, [currentInning]);
 
   // --- LOBBY: Fetch active matches & subscribe to global updates ---
   useEffect(() => {
@@ -170,6 +181,12 @@ export default function LiveViewerDashboard() {
   const totalBalls = (overs * 6) + ballsInCurrentOver;
   const currentRunRate = totalBalls > 0 ? ((totalRuns / totalBalls) * 6).toFixed(2) : '0.00';
 
+  // Compute team rosters for scorecard tabs based on current state
+  const inning1BattingTeam = currentInning === 1 ? battingTeam : bowlingTeam;
+  const inning1BowlingTeam = currentInning === 1 ? bowlingTeam : battingTeam;
+  const inning2BattingTeam = currentInning === 2 ? battingTeam : bowlingTeam;
+  const inning2BowlingTeam = currentInning === 2 ? bowlingTeam : battingTeam;
+
   // --- RENDER LOBBY LAYOUT ---
   if (!selectedMatchId) {
     return (
@@ -252,13 +269,22 @@ export default function LiveViewerDashboard() {
           
           <div className="p-6 md:p-8">
             <div className="flex justify-between items-center mb-6">
-              <span className="text-xs font-bold bg-red-500 text-white px-2 py-1 rounded animate-pulse tracking-widest uppercase">Live</span>
+              {matchVerdict ? (
+                 <span className="text-xs font-bold bg-blue-600 text-white px-2 py-1 rounded tracking-widest uppercase">Match Complete</span>
+              ) : (
+                 <span className="text-xs font-bold bg-red-500 text-white px-2 py-1 rounded animate-pulse tracking-widest uppercase">Live</span>
+              )}
               <span className="text-xs text-slate-400 uppercase tracking-widest">{meta?.tournament || 'Match Center'}</span>
             </div>
 
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="text-center md:text-left flex-1">
                 <h2 className="text-2xl md:text-3xl font-bold text-slate-200">{meta?.teamA || 'Team A'}</h2>
+                {currentInning === 2 && firstInningScore && (
+                  <div className="text-sm text-slate-400 mt-2">
+                    {firstInningScore.runs}/{firstInningScore.wickets} <span className="text-xs">({firstInningScore.overs}.{firstInningScore.balls})</span>
+                  </div>
+                )}
               </div>
               
               <div className="text-center flex-none">
@@ -266,14 +292,27 @@ export default function LiveViewerDashboard() {
                   {totalRuns}<span className="text-3xl md:text-4xl text-slate-300">/{totalWickets}</span>
                 </div>
                 <div className="text-lg text-emerald-400 font-medium mt-1">Overs {overs}.{ballsInCurrentOver}</div>
+                {currentInning === 2 && targetScore && (
+                   <div className="text-sm text-amber-400 font-bold mt-1 tracking-wider uppercase">Target: {targetScore}</div>
+                )}
                 <div className="text-xs text-slate-500 mt-2 font-mono">CRR: {currentRunRate}</div>
               </div>
 
               <div className="text-center md:text-right flex-1">
                 <h2 className="text-2xl md:text-3xl font-bold text-slate-400">{meta?.teamB || 'Team B'}</h2>
-                <div className="text-xs text-slate-500 mt-2">Yet to bat</div>
+                {currentInning === 1 ? (
+                  <div className="text-xs text-slate-500 mt-2">Yet to bat</div>
+                ) : (
+                  <div className="text-xs text-emerald-500 mt-2 font-semibold">Batting</div>
+                )}
               </div>
             </div>
+            
+            {matchVerdict && (
+              <div className="mt-8 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-center">
+                <span className="text-lg font-bold text-emerald-400">{matchVerdict}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -355,14 +394,34 @@ export default function LiveViewerDashboard() {
 
         </div>
 
-        {/* Detailed Live Scorecard */}
-        <LiveScorecard 
-          deliveries={deliveryHistory?.filter(d => d.inning === useScoringStore.getState().currentInning) || []}
-          battingTeam={battingTeam} 
-          bowlingTeam={bowlingTeam} 
-          currentStrikerId={strikerId}
-          currentNonStrikerId={nonStrikerId}
-        />
+        {/* Scorecard Tabs & Detailed Live Scorecard */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-lg">
+           <div className="flex border-b border-zinc-800">
+             <button
+                onClick={() => setActiveTab(1)}
+                className={`flex-1 py-4 text-sm font-semibold transition-colors ${activeTab === 1 ? 'bg-emerald-500/10 text-emerald-400 border-b-2 border-emerald-500' : 'text-slate-400 hover:text-slate-200 hover:bg-zinc-800'}`}
+             >
+                1st Inning ({meta?.teamA || 'Team A'})
+             </button>
+             <button
+                onClick={() => setActiveTab(2)}
+                disabled={currentInning === 1}
+                className={`flex-1 py-4 text-sm font-semibold transition-colors ${currentInning === 1 ? 'opacity-50 cursor-not-allowed text-slate-600' : activeTab === 2 ? 'bg-emerald-500/10 text-emerald-400 border-b-2 border-emerald-500' : 'text-slate-400 hover:text-slate-200 hover:bg-zinc-800'}`}
+             >
+                2nd Inning ({meta?.teamB || 'Team B'})
+             </button>
+           </div>
+           
+           <div className="p-1">
+             <LiveScorecard 
+               deliveries={deliveryHistory?.filter(d => d.inning === activeTab) || []}
+               battingTeam={activeTab === 1 ? inning1BattingTeam : inning2BattingTeam} 
+               bowlingTeam={activeTab === 1 ? inning1BowlingTeam : inning2BowlingTeam} 
+               currentStrikerId={activeTab === currentInning ? strikerId : null}
+               currentNonStrikerId={activeTab === currentInning ? nonStrikerId : null}
+             />
+           </div>
+        </div>
 
       </main>
     </div>
