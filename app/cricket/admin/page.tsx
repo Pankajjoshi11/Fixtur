@@ -18,7 +18,7 @@ export default function AdminScoringDashboard() {
   const [step, setStep] = useState<AdminStep>('LOGIN');
 
   // --- TOURNAMENT STATE ---
-  const [tournament, setTournament] = useState({ name: '', location: '', format: 'T20', overs: 20 });
+  const [tournament, setTournament] = useState({ id: crypto.randomUUID(), name: '', location: '', format: 'T20', overs: 20 });
 
   // --- TEAMS STATE ---
   const [teams, setTeams] = useState<Team[]>([]);
@@ -30,6 +30,22 @@ export default function AdminScoringDashboard() {
   const [activeMatch, setActiveMatch] = useState<Match | null>(null);
   const [tossWinnerId, setTossWinnerId] = useState('');
   const [tossDecision, setTossDecision] = useState<'BAT' | 'BOWL'>('BAT');
+
+  const saveSetup = async (currentTournament: any, currentTeams: Team[], currentMatches: Match[]) => {
+    try {
+      await fetch('/api/tournament/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tournament: currentTournament,
+          teams: currentTeams,
+          matches: currentMatches
+        })
+      });
+    } catch (e) {
+      console.error("Failed to save setup data", e);
+    }
+  };
 
   const startPreMatch = (match: Match) => {
     setActiveMatch(match);
@@ -43,9 +59,25 @@ export default function AdminScoringDashboard() {
     return player ? player.name : id;
   };
 
-  const handleStartMatch = (openingStrikerId: string, openingNonStrikerId: string, openingBowlerId: string) => {
+  const handleStartMatch = async (openingStrikerId: string, openingNonStrikerId: string, openingBowlerId: string) => {
     if (!activeMatch) return;
     
+    try {
+      await fetch('/api/scoring/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tournament,
+          teams,
+          activeMatch,
+          tossWinnerId,
+          tossDecision
+        })
+      });
+    } catch (e) {
+      console.error("Failed to initialize match in DB", e);
+    }
+
     // Initialize Zustand Store with meta names
     store.initializeMatch(activeMatch.id);
     store.setStateOverride({
@@ -112,7 +144,10 @@ export default function AdminScoringDashboard() {
           <CreateTournamentStep 
             tournament={tournament} 
             setTournament={setTournament} 
-            onNext={() => setStep('CREATE_TEAMS')} 
+            onNext={() => {
+              saveSetup(tournament, teams, matches);
+              setStep('CREATE_TEAMS');
+            }} 
           />
         )}
 
@@ -120,7 +155,10 @@ export default function AdminScoringDashboard() {
           <CreateTeamsStep 
             teams={teams} 
             setTeams={setTeams} 
-            onNext={() => setStep('SCHEDULE_MATCH')} 
+            onNext={() => {
+              saveSetup(tournament, teams, matches);
+              setStep('SCHEDULE_MATCH');
+            }} 
           />
         )}
 
@@ -128,7 +166,10 @@ export default function AdminScoringDashboard() {
           <ScheduleMatchStep 
             teams={teams} 
             matches={matches} 
-            setMatches={setMatches} 
+            setMatches={(newMatches) => {
+              setMatches(newMatches);
+              saveSetup(tournament, teams, newMatches);
+            }} 
             startPreMatch={startPreMatch} 
           />
         )}

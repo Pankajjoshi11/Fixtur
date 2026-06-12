@@ -56,8 +56,9 @@ model Player {
   isCaptain    Boolean     @default(false)
   team         Team        @relation(fields: [teamId], references: [id])
   teamId       String
-  deliveriesBatted  InningDelivery[] @relation("Batsman")
-  deliveriesBowled  InningDelivery[] @relation("Bowler")
+  deliveriesStruck    InningDelivery[] @relation("Striker")
+  deliveriesNonStruck InningDelivery[] @relation("NonStriker")
+  deliveriesBowled    InningDelivery[] @relation("Bowler")
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 }
@@ -75,26 +76,48 @@ model Match {
   awayTeamId   String
   tossWinnerId String?
   tossDecision String?     // e.g., "BAT", "BOWL"
+  
+  // Live State Persistence
+  currentInning      Int       @default(1)
+  totalRuns          Int       @default(0)
+  totalWickets       Int       @default(0)
+  overs              Int       @default(0)
+  ballsInCurrentOver Int       @default(0)
+  
+  firstInningRuns    Int?
+  firstInningWickets Int?
+  firstInningOvers   Int?
+  firstInningBalls   Int?
+  targetScore        Int?
+  matchVerdict       String?
+  
+  strikerId          String?
+  nonStrikerId       String?
+  bowlerId           String?
+
   deliveries   InningDelivery[]
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 }
 
 model InningDelivery {
-  id           String   @id @default(cuid())
-  match        Match    @relation(fields: [matchId], references: [id])
-  matchId      String
-  inning       Int      // 1 or 2
-  overNumber   Int      // e.g., 0 for first over
-  ballNumber   Int      // 1 to 6 (or more if extras)
-  batsman      Player   @relation("Batsman", fields: [batsmanId], references: [id])
-  batsmanId    String
-  bowler       Player   @relation("Bowler", fields: [bowlerId], references: [id])
-  bowlerId     String
-  runsBat      Int      @default(0) // Runs off the bat
-  extras       Int      @default(0)
-  extraType    String?  // "WIDE", "NO_BALL", "BYE", "LEG_BYE"
-  isWicket     Boolean  @default(false)
-  wicketType   String?  // "BOWLED", "CAUGHT", "RUN_OUT", etc.
-  timestamp    DateTime @default(now())
+  id              String   @id @default(cuid())
+  match           Match    @relation(fields: [matchId], references: [id])
+  matchId         String
+  inning          Int      // 1 or 2
+  
+  striker         Player   @relation("Striker", fields: [strikerId], references: [id])
+  strikerId       String
+  nonStriker      Player   @relation("NonStriker", fields: [nonStrikerId], references: [id])
+  nonStrikerId    String
+  bowler          Player   @relation("Bowler", fields: [bowlerId], references: [id])
+  bowlerId        String
+  
+  runs            Int      @default(0)
+  extras          Int      @default(0)
+  extraType       String?  // "WIDE", "NO_BALL", "BYE", "LEG_BYE"
+  isWicket        Boolean  @default(false)
+  wicketType      String?  // "BOWLED", "CAUGHT", "RUN_OUT", etc.
+  isLegalDelivery Boolean  @default(true)
+  timestamp       DateTime @default(now())
 }
