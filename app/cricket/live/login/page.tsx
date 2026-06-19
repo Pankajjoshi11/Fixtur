@@ -18,7 +18,8 @@ export default function LoginPage() {
     });
 
     if (res.ok) {
-      router.push("/cricket/live");
+      const data = await res.json();
+      router.push(`/cricket/live/${data.playerId}`);
     } else {
       alert("Invalid credentials");
     }

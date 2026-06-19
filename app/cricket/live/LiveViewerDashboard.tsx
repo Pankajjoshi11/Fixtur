@@ -25,14 +25,16 @@ type ActiveMatchSummary = {
 
 export default function LiveViewerDashboard({
   user,
+  playerId,
 }: {
   user: { id: string; email: string } | null;
+  playerId?: string;
 }) {
   const [activeMatches, setActiveMatches] = useState<ActiveMatchSummary[]>([]);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
-  // --- LOBBY: Fetch active matches & subscribe to global updates ---
   useEffect(() => {
     const fetchMatches = async () => {
       try {
@@ -96,24 +98,39 @@ export default function LiveViewerDashboard({
             Admin Panel
           </Link>
           {user ? (
-            <div className="relative group">
-              <button className="rounded-full bg-emerald-500 p-2 text-white">
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                aria-label="User menu"
+                className="rounded-full bg-emerald-500 p-2 text-white hover:bg-emerald-600 transition-colors"
+              >
                 <UserIcon size={20} />
               </button>
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 hidden group-hover:block">
-                <Link
-                  href="/cricket/live/dashboard"
-                  className="block px-4 py-2 text-.sm text-gray-700 hover:bg-gray-100"
-                >
-                  Dashboard
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  Logout
-                </button>
-              </div>
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-zinc-900 border border-zinc-700 rounded-md shadow-lg py-1 z-50">
+                  {playerId && (
+                    <div className="px-4 py-2 text-xs text-slate-400 border-b border-zinc-800">
+                      Player ID: <span className="text-emerald-400 font-mono">{playerId}</span>
+                    </div>
+                  )}
+                  <Link
+                    href={`/cricket/live/${playerId || ''}`}
+                    className="block px-4 py-2 text-sm text-slate-200 hover:bg-zinc-800"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    Dashboard
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      handleLogout();
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-zinc-800"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <AuthButtons />

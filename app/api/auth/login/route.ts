@@ -37,5 +37,5 @@ export async function POST(req: Request) {
     path: "/",
   });
 
-  return NextResponse.json({ message: "Login successful" });
+  return NextResponse.json({ message: "Login successful", playerId: user.playerId, userId: user.id, email: user.email });
 }
