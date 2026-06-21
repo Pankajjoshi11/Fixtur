@@ -78,21 +78,25 @@ fixtur/
 │   │   │   ├── [matchId]/route.ts # GET: return full match state for direct polling
 │   │   │   └── init/route.ts     # POST: validate playerIds → upsert Tournament, Teams, Players, Match in DB when admin starts a match
 │   │   │
-│   │   └── tournament/
-│   │       └── setup/route.ts    # POST: validate playerIds → bulk upsert tournament + teams + players + matches
+│   │   ├── tournament/
+│   │   │   ├── setup/route.ts    # POST: validate playerIds → bulk upsert tournament + teams + players + matches
+│   │   │   └── route.ts          # GET: return all tournaments with status (upcoming/ongoing/completed)
+│   │   │
+│   │   └── users/
+│   │       ├── route.ts          # GET: return all registered users (excluding passwords)
+│   │       └── [id]/route.ts     # PUT: update user details (name, email, age, gender) — password excluded
 │   │
 │   └── cricket/
 │       ├── admin/
-│       │   ├── page.tsx          # Admin multi-step wizard (see Section 6.1)
+│       │   ├── page.tsx          # Redirects to /cricket/admin/dashboard
 │       │   ├── types.ts          # AdminStep, Player, Team, Match types
-│       │   └── components/
-│       │       ├── LoginStep.tsx          # Hardcoded admin login (admin@gmail.com / admin)
-│       │       ├── CreateTournamentStep.tsx # Tournament creation form (name, location, format, overs)
-│       │       ├── CreateTeamsStep.tsx    # Manual team/player entry + Excel bulk upload with playerId validation
-│       │       ├── ScheduleMatchStep.tsx  # Schedule matches between created teams
-│       │       ├── PreMatchStep.tsx       # Toss decision + opening batsmen/bowler selection
-│       │       ├── LiveMatchStep.tsx      # Full scoring console (see Section 6.2)
-│       │       └── LiveScorecard.tsx      # Shared batting/bowling scorecard table component
+│       │   ├── dashboard/
+│       │   │   └── page.tsx      # Admin dashboard — tournament list with status, stats cards
+│       │   ├── users/
+│       │   │   └── page.tsx      # User management — list users, view/edit details (except password)
+│       │   └── tournament/
+│       │       └── create/
+│       │           └── page.tsx  # Full tournament creation wizard (multi-step)
 │       │
 │       └── live/
 │           ├── page.tsx           # Public lobby — renders LiveViewerDashboard (no playerId)
@@ -297,7 +301,10 @@ type Match = { id: string; teamA: Team; teamB: Team; date: string; status: strin
 | POST | `/api/auth/login` | Verify credentials, issue JWT cookie, return {playerId, userId, email} |
 | POST | `/api/auth/logout` | Delete session cookie |
 | GET | `/api/player/validate?playerId=XXXXX` | Validate playerId exists in User table — returns {valid: boolean, user?: {id, name, email}} |
+| GET | `/api/tournaments` | Return all tournaments with computed status (upcoming/ongoing/completed) and stats |
 | POST | `/api/tournament/setup` | Validate all playerIds → bulk upsert tournament + teams + players + matches |
+| GET | `/api/users` | Return all registered users (excluding passwords) |
+| PUT | `/api/users/[id]` | Update user details (name, email, age, gender) — password excluded |
 | POST | `/api/scoring/init` | Validate all playerIds → upsert tournament/teams/players/match when admin starts match |
 | POST | `/api/scoring/sync` | Persist full state to DB, update in-memory store, broadcast Pusher |
 | GET | `/api/scoring/sync` | Return all active matches (lobby listing) |

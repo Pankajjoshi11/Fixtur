@@ -55,7 +55,7 @@ model Player {
   name         String
   role         String?     // e.g., Batsman, Bowler, All-rounder
   isCaptain    Boolean     @default(false)
-  playerId     Int         @unique // References User.playerId for registered players
+  playerId     Int?        @unique // References User.playerId for registered players
   team         Team        @relation(fields: [teamId], references: [id])
   teamId       String
   deliveriesStruck    InningDelivery[] @relation("Striker")
