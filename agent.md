@@ -43,7 +43,8 @@ fixtur/
 ├── gemini.md                     # Engineering specifications & blueprint
 │
 ├── prisma/
-│   └── schema.prisma             # Full database schema (see Section 4)
+│   ├── schema.prisma             # Full database schema (see Section 4)
+│   └── schema                    # Alternative schema file (legacy)
 │
 ├── lib/
 │   ├── prisma.ts                 # PrismaClient singleton (dev: globalThis cache, prod: new instance)
@@ -68,14 +69,17 @@ fixtur/
 │   │   │   ├── signup/route.ts   # POST: hash password → create User → return {playerId}
 │   │   │   └── logout/route.ts   # POST: delete session cookie
 │   │   │
+│   │   ├── player/
+│   │   │   └── validate/route.ts # GET: validate playerId exists in User table — returns {valid, user?}
+│   │   │
 │   │   ├── scoring/
 │   │   │   ├── sync/route.ts     # POST: persist state to DB (Match + InningDelivery), update in-memory store, broadcast Pusher events
 │   │   │   │                     # GET: return all active matches for lobby
 │   │   │   ├── [matchId]/route.ts # GET: return full match state for direct polling
-│   │   │   └── init/route.ts     # POST: upsert Tournament, Teams, Players, Match in DB when admin starts a match
+│   │   │   └── init/route.ts     # POST: validate playerIds → upsert Tournament, Teams, Players, Match in DB when admin starts a match
 │   │   │
 │   │   └── tournament/
-│   │       └── setup/route.ts    # POST: bulk upsert tournament + teams + players + matches
+│   │       └── setup/route.ts    # POST: validate playerIds → bulk upsert tournament + teams + players + matches
 │   │
 │   └── cricket/
 │       ├── admin/
@@ -84,7 +88,7 @@ fixtur/
 │       │   └── components/
 │       │       ├── LoginStep.tsx          # Hardcoded admin login (admin@gmail.com / admin)
 │       │       ├── CreateTournamentStep.tsx # Tournament creation form (name, location, format, overs)
-│       │       ├── CreateTeamsStep.tsx    # Manual team/player entry + Excel bulk upload via xlsx
+│       │       ├── CreateTeamsStep.tsx    # Manual team/player entry + Excel bulk upload with playerId validation
 │       │       ├── ScheduleMatchStep.tsx  # Schedule matches between created teams
 │       │       ├── PreMatchStep.tsx       # Toss decision + opening batsmen/bowler selection
 │       │       ├── LiveMatchStep.tsx      # Full scoring console (see Section 6.2)
@@ -131,8 +135,10 @@ Team within a tournament — `id` (cuid), `name`, `shortName`, `logoUrl`?, times
 **Relations:** `tournament` (Tournament), `players` (Player[]), `homeMatches` (Match[] via "HomeTeam"), `awayMatches` (Match[] via "AwayTeam").
 
 #### Player
-Player within a team — `id` (cuid), `name`, `role`? (Batsman/Bowler/All-rounder), `isCaptain` (default false), timestamps.
+Player within a team — `id` (cuid), `name`, `role`? (Batsman/Bowler/All-rounder), `isCaptain` (default false), `playerId` (required, unique, references User.playerId), timestamps.
 **Relations:** `team` (Team), `deliveriesStruck` (InningDelivery[] via "Striker"), `deliveriesNonStruck` (InningDelivery[] via "NonStriker"), `deliveriesBowled` (InningDelivery[] via "Bowler").
+
+> **Important:** `playerId` is **required** and must correspond to a registered User. This ensures only registered users can participate in tournaments.
 
 #### Match
 Match entity — `id` (cuid), `title`?, `status` (MatchStatus, default SCHEDULED), `sport` (Sport), `tossWinnerId`?, `tossDecision`? (BAT/BOWL).
@@ -210,12 +216,18 @@ Admin LiveMatchStep → POST /api/scoring/sync (full state)
 |---|---|---|
 | LOGIN | `LoginStep.tsx` | Hardcoded check: `admin@gmail.com` / `admin`. On success, advances to CREATE_TOURNAMENT. |
 | CREATE_TOURNAMENT | `CreateTournamentStep.tsx` | Form: name, location, format (T20/ODI/Test), overs. Saves to DB via `/api/tournament/setup`. |
-| CREATE_TEAMS | `CreateTeamsStep.tsx` | Manual: add team name/shortName, add players (name, role, captain flag). Bulk: upload .xlsx with columns TeamName, ShortName, PlayerName, Role, IsCaptain. Saves via `/api/tournament/setup`. |
+| CREATE_TEAMS | `CreateTeamsStep.tsx` | Manual: add team name/shortName, add players (name, role, captain flag, **required playerId**). Bulk: upload .xlsx with columns TeamName, ShortName, PlayerName, Role, IsCaptain, **PlayerID**. Validates all playerIds against User table before saving. Shows modal with unregistered players if validation fails. |
 | SCHEDULE_MATCH | `ScheduleMatchStep.tsx` | Select two teams → create match. Saves via `/api/tournament/setup`. "Start Match" advances to PRE_MATCH. |
 | PRE_MATCH | `PreMatchStep.tsx` | Toss winner + decision (BAT/BOWL). Select opening 2 batsmen (from batting team) + 1 bowler (from bowling team). On start: POST `/api/scoring/init` to persist in DB, then initializes Zustand store. |
 | LIVE_MATCH | `LiveMatchStep.tsx` | Full scoring console (see 6.2). |
 
-**Types** (`types.ts`): `AdminStep` (union of step names), `Player` ({id, name, role, isCaptain}), `Team` ({id, name, shortName, players}), `Match` ({id, teamA, teamB, date, status}).
+**Types** (`types.ts`):
+```typescript
+type AdminStep = 'LOGIN' | 'CREATE_TOURNAMENT' | 'CREATE_TEAMS' | 'SCHEDULE_MATCH' | 'PRE_MATCH' | 'LIVE_MATCH';
+type Player = { id: string; name: string; role: string; isCaptain: boolean; playerId: number }; // playerId is required
+type Team = { id: string; name: string; shortName: string; players: Player[] };
+type Match = { id: string; teamA: Team; teamB: Team; date: string; status: string };
+```
 
 ### 6.2 Live Match Scoring (`LiveMatchStep.tsx`)
 
@@ -284,8 +296,9 @@ Admin LiveMatchStep → POST /api/scoring/sync (full state)
 | POST | `/api/auth/signup` | Create user with hashed password, return playerId |
 | POST | `/api/auth/login` | Verify credentials, issue JWT cookie, return {playerId, userId, email} |
 | POST | `/api/auth/logout` | Delete session cookie |
-| POST | `/api/tournament/setup` | Bulk upsert tournament + teams + players + matches |
-| POST | `/api/scoring/init` | Upsert tournament/teams/players/match when admin starts match |
+| GET | `/api/player/validate?playerId=XXXXX` | Validate playerId exists in User table — returns {valid: boolean, user?: {id, name, email}} |
+| POST | `/api/tournament/setup` | Validate all playerIds → bulk upsert tournament + teams + players + matches |
+| POST | `/api/scoring/init` | Validate all playerIds → upsert tournament/teams/players/match when admin starts match |
 | POST | `/api/scoring/sync` | Persist full state to DB, update in-memory store, broadcast Pusher |
 | GET | `/api/scoring/sync` | Return all active matches (lobby listing) |
 | GET | `/api/scoring/[matchId]` | Return full match state for direct polling |
@@ -315,10 +328,38 @@ Admin LiveMatchStep → POST /api/scoring/sync (full state)
 5. **Admin login is hardcoded:** `admin@gmail.com` / `admin` — not database-backed. The admin panel has no real auth protection.
 6. **Middleware doesn't enforce auth:** JWT is verified and headers are injected, but unauthenticated requests are not redirected (redirects are commented out).
 7. **Shared LiveScorecard:** The same `LiveScorecard` component is used in both Admin (`LiveMatchStep`) and Viewer (`MatchDetailView`), receiving filtered deliveries as props.
+8. **Player ID validation:** All playerIds must correspond to registered Users. Validation occurs both client-side (before UI actions) and server-side (before DB writes). Unregistered players are shown in a modal with their names and IDs.
 
 ---
 
-## 10. Current Known Issues & Future Work
+## 10. Player Registration System
+
+### 10.1 Overview
+Only registered users (those with a User account) can participate in tournaments. Each User has a unique `playerId` (auto-generated 5-digit number between 10000-99999).
+
+### 10.2 Player ID Flow
+1. User signs up via `/api/auth/signup` → receives `playerId`
+2. Admin creates teams and enters `playerId` for each player
+3. System validates `playerId` exists in User table before allowing registration
+4. If invalid, admin sees modal with list of unregistered players
+
+### 10.3 Validation Points
+- **Client-side (CreateTeamsStep):**
+  - Before adding team manually
+  - Before processing Excel upload
+  - Before proceeding to scheduling
+- **Server-side (API routes):**
+  - `/api/tournament/setup` — validates all players before any DB writes
+  - `/api/scoring/init` — validates all players before match initialization
+
+### 10.4 Excel Upload Format
+Required columns: `TeamName`, `ShortName`, `PlayerName`, `Role`, `IsCaptain`, `PlayerID`
+- `PlayerID` is required and must match a registered User's playerId
+- Rows with invalid PlayerID are rejected with error message showing unregistered players
+
+---
+
+## 11. Current Known Issues & Future Work
 
 - **Admin auth is mock** — hardcoded credentials, no DB-backed admin auth
 - **Middleware doesn't enforce auth** — redirects are commented out

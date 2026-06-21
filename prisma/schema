@@ -6,7 +6,6 @@ datasource db {
   provider = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
-  // directUrl = env("DIRECT_URL") // Moved to prisma.config.ts
 }
 
 enum Sport {
@@ -47,27 +46,27 @@ model Team {
   homeMatches  Match[]     @relation("HomeTeam")
   awayMatches  Match[]     @relation("AwayTeam")
   createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  updatedAt    DateTime @updatedAt
 }
 
 model Player {
   id           String      @id @default(cuid())
   name         String
-  role         String?     // e.g., Batsman, Bowler, All-rounder
+  role         String?
   isCaptain    Boolean     @default(false)
-  playerId     Int         @unique // References User.playerId for registered players
+  playerId     Int?        @unique
   team         Team        @relation(fields: [teamId], references: [id])
   teamId       String
   deliveriesStruck    InningDelivery[] @relation("Striker")
   deliveriesNonStruck InningDelivery[] @relation("NonStriker")
   deliveriesBowled    InningDelivery[] @relation("Bowler")
   createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  updatedAt    DateTime @updatedAt
 }
 
 model Match {
   id           String      @id @default(cuid())
-  title        String?     // e.g., "Final", "Match 1"
+  title        String?
   status       MatchStatus @default(SCHEDULED)
   sport        Sport
   tournament   Tournament  @relation(fields: [tournamentId], references: [id])
@@ -77,29 +76,24 @@ model Match {
   awayTeam     Team        @relation("AwayTeam", fields: [awayTeamId], references: [id])
   awayTeamId   String
   tossWinnerId String?
-  tossDecision String?     // e.g., "BAT", "BOWL"
-  
-  // Live State Persistence
+  tossDecision String?
   currentInning      Int       @default(1)
   totalRuns          Int       @default(0)
   totalWickets       Int       @default(0)
   overs              Int       @default(0)
   ballsInCurrentOver Int       @default(0)
-  
   firstInningRuns    Int?
   firstInningWickets Int?
   firstInningOvers   Int?
   firstInningBalls   Int?
   targetScore        Int?
   matchVerdict       String?
-  
   strikerId          String?
   nonStrikerId       String?
   bowlerId           String?
-
   deliveries   InningDelivery[]
   createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  updatedAt    DateTime @updatedAt
 }
 
 enum Gender {
@@ -130,20 +124,18 @@ model InningDelivery {
   id              String   @id @default(cuid())
   match           Match    @relation(fields: [matchId], references: [id])
   matchId         String
-  inning          Int      // 1 or 2
-  
+  inning          Int
   striker         Player   @relation("Striker", fields: [strikerId], references: [id])
   strikerId       String
   nonStriker      Player   @relation("NonStriker", fields: [nonStrikerId], references: [id])
   nonStrikerId    String
   bowler          Player   @relation("Bowler", fields: [bowlerId], references: [id])
   bowlerId        String
-  
   runs            Int      @default(0)
   extras          Int      @default(0)
-  extraType       String?  // "WIDE", "NO_BALL", "BYE", "LEG_BYE"
+  extraType       String?
   isWicket        Boolean  @default(false)
-  wicketType      String?  // "BOWLED", "CAUGHT", "RUN_OUT", etc.
+  wicketType      String?
   isLegalDelivery Boolean  @default(true)
   timestamp       DateTime @default(now())
 }

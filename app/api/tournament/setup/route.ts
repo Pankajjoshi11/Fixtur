@@ -27,6 +27,38 @@ export async function POST(req: Request) {
     }
 
     if (teams && teams.length > 0 && tournament) {
+      // Validate all playerIds before creating any records
+      const invalidPlayers: { name: string; playerId: number }[] = [];
+      
+      for (const team of teams) {
+        if (team.players && team.players.length > 0) {
+          for (const player of team.players) {
+            // Check if user with this playerId exists
+            const user = await prisma.user.findUnique({
+              where: { playerId: player.playerId },
+              select: { id: true, name: true }
+            });
+            
+            if (!user) {
+              invalidPlayers.push({ name: player.name, playerId: player.playerId });
+            }
+          }
+        }
+      }
+
+      // If there are invalid players, return error with details
+      if (invalidPlayers.length > 0) {
+        return NextResponse.json(
+          { 
+            error: 'Invalid player IDs found',
+            invalidPlayers: invalidPlayers,
+            message: `The following players are not registered: ${invalidPlayers.map(p => `${p.name} (ID: ${p.playerId})`).join(', ')}`
+          },
+          { status: 400 }
+        );
+      }
+
+      // All validations passed, proceed with creating records
       for (const team of teams) {
         await prisma.team.upsert({
           where: { id: team.id },
@@ -43,12 +75,13 @@ export async function POST(req: Request) {
           for (const player of team.players) {
             await prisma.player.upsert({
               where: { id: player.id },
-              update: { name: player.name, role: player.role, isCaptain: player.isCaptain },
+              update: { name: player.name, role: player.role, isCaptain: player.isCaptain, playerId: player.playerId },
               create: {
                 id: player.id,
                 name: player.name,
                 role: player.role,
                 isCaptain: player.isCaptain,
+                playerId: player.playerId,
                 teamId: team.id
               }
             });
