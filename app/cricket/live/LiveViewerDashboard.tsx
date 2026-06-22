@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { getPusherClient } from '@/lib/pusher';
-import { Trophy, User as UserIcon } from 'lucide-react';
+import { Trophy, User as UserIcon, LogOut, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 import LobbyDashboard from './LobbyDashboard';
 import MatchDetailView from './MatchDetailView';
 import AuthButtons from './AuthButtons';
+import { signOut } from 'next-auth/react';
 
 type ActiveMatchSummary = {
   matchId: string;
@@ -27,8 +28,8 @@ export default function LiveViewerDashboard({
   user,
   playerId,
 }: {
-  user: { id: string; email: string } | null;
-  playerId?: string;
+  user: { id: string; email: string; name?: string; image?: string } | null;
+  playerId?: number;
 }) {
   const [activeMatches, setActiveMatches] = useState<ActiveMatchSummary[]>([]);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
@@ -69,10 +70,7 @@ export default function LiveViewerDashboard({
   }, []);
 
   const handleLogout = async () => {
-    const res = await fetch('/api/auth/logout', { method: 'POST' });
-    if (res.ok) {
-      window.location.reload();
-    }
+    await signOut({ callbackUrl: '/cricket/live' });
   };
 
   return (
@@ -102,22 +100,40 @@ export default function LiveViewerDashboard({
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 aria-label="User menu"
-                className="rounded-full bg-emerald-500 p-2 text-white hover:bg-emerald-600 transition-colors"
+                className="flex items-center gap-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors pr-3 pl-1 py-1"
               >
-                <UserIcon size={20} />
+                {user.image ? (
+                  <img
+                    src={user.image}
+                    alt={user.name || 'User'}
+                    className="w-8 h-8 rounded-full"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center">
+                    <UserIcon size={18} className="text-white" />
+                  </div>
+                )}
+                <span className="text-sm text-slate-300 max-w-[100px] truncate">
+                  {user.name || user.email}
+                </span>
               </button>
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-zinc-900 border border-zinc-700 rounded-md shadow-lg py-1 z-50">
-                  {playerId && (
-                    <div className="px-4 py-2 text-xs text-slate-400 border-b border-zinc-800">
-                      Player ID: <span className="text-emerald-400 font-mono">{playerId}</span>
-                    </div>
-                  )}
+                <div className="absolute right-0 mt-2 w-56 bg-zinc-900 border border-zinc-700 rounded-lg shadow-lg py-2 z-50">
+                  <div className="px-4 py-2 border-b border-zinc-800">
+                    <p className="text-sm font-medium text-slate-200 truncate">{user.name}</p>
+                    <p className="text-xs text-slate-400 truncate">{user.email}</p>
+                    {playerId && (
+                      <p className="text-xs text-slate-400 mt-1">
+                        Player ID: <span className="text-emerald-400 font-mono">{playerId}</span>
+                      </p>
+                    )}
+                  </div>
                   <Link
                     href={`/cricket/live/${playerId || ''}`}
-                    className="block px-4 py-2 text-sm text-slate-200 hover:bg-zinc-800"
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-slate-200 hover:bg-zinc-800 transition-colors"
                     onClick={() => setShowUserMenu(false)}
                   >
+                    <LayoutDashboard size={16} />
                     Dashboard
                   </Link>
                   <button
@@ -125,8 +141,9 @@ export default function LiveViewerDashboard({
                       setShowUserMenu(false);
                       handleLogout();
                     }}
-                    className="block w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-zinc-800"
+                    className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-zinc-800 transition-colors"
                   >
+                    <LogOut size={16} />
                     Logout
                   </button>
                 </div>

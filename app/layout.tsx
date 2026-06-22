@@ -3,28 +3,12 @@ import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import './globals.css'
+import { Providers } from '../providers';
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
-  icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
-  },
+  title: 'Fixtur - Live Sports Scoring',
+  description: 'Multi-sport tournament management and live-scoring platform',
+  generator: 'Fixtur',
 }
 
 export default function RootLayout({
@@ -35,7 +19,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className="font-sans antialiased">
-        {children}
+        <Providers>
+          {children}
+        </Providers>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

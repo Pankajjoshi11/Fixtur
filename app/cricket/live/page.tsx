@@ -1,11 +1,27 @@
+"use client";
+
+import { useSession } from "next-auth/react";
 import LiveViewerDashboard from './LiveViewerDashboard';
-import { headers } from 'next/headers';
 
 export default function LivePage() {
-  const heads = headers();
-  const userId = heads.get('x-user-id');
-  const userEmail = heads.get('x-user-email');
-  const user = userId && userEmail ? { id: userId, email: userEmail } : null;
+  const { data: session, status } = useSession();
+  
+  const user = session?.user ? {
+    id: (session.user as any).id || '',
+    email: session.user.email || '',
+    name: session.user.name || '',
+    image: session.user.image || '',
+  } : null;
 
-  return <LiveViewerDashboard user={user} />;
+  const playerId = session?.user ? (session.user as any).playerId : undefined;
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-slate-50 flex items-center justify-center">
+        <p className="text-slate-500">Loading...</p>
+      </div>
+    );
+  }
+
+  return <LiveViewerDashboard user={user} playerId={playerId} />;
 }
