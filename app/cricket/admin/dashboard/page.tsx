@@ -157,14 +157,15 @@ export default function AdminDashboard() {
           ) : (
             <div className="divide-y divide-zinc-800">
               {tournaments.map((tournament) => (
-                <div
+                <Link
                   key={tournament.id}
-                  className="px-6 py-4 hover:bg-zinc-800/50 transition-colors"
+                  href={`/cricket/admin/tournament/${tournament.id}`}
+                  className="block px-6 py-4 hover:bg-zinc-800/50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-1">
-                        <h3 className="font-semibold text-lg">{tournament.name}</h3>
+                        <h3 className="font-semibold text-lg text-slate-200 hover:text-emerald-400 transition-colors">{tournament.name}</h3>
                         <span
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(
                             tournament.status
@@ -201,7 +202,7 @@ export default function AdminDashboard() {
                       )}
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
