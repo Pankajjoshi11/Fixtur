@@ -18,18 +18,23 @@ const handler = NextAuth({
         });
 
         if (!existingUser) {
-          // Generate a unique playerId
-          let playerId: number;
-          let isUnique = false;
-
-          while (!isUnique) {
-            playerId = Math.floor(10000 + Math.random() * 90000);
+          // Generate a unique playerId with retry limit
+          let playerId: number | null = null;
+          
+          for (let attempts = 0; attempts < 10; attempts++) {
+            const candidate = Math.floor(10000 + Math.random() * 90000);
             const existing = await prisma.user.findUnique({
-              where: { playerId },
+              where: { playerId: candidate },
+              select: { id: true },
             });
             if (!existing) {
-              isUnique = true;
+              playerId = candidate;
+              break;
             }
+          }
+
+          if (!playerId) {
+            throw new Error("Could not generate a unique playerId");
           }
 
           // Create new user
@@ -40,7 +45,7 @@ const handler = NextAuth({
               age: 0,
               gender: "OTHER",
               password: "", // No password for Google users
-              playerId: playerId!,
+              playerId: playerId,
             },
           });
         }
