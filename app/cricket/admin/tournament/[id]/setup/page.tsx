@@ -56,7 +56,13 @@ function TournamentSetupContent() {
       const matchesRes = await fetch(`/api/tournaments/${tournamentId}/matches`);
       if (matchesRes.ok) {
         const matchesData = await matchesRes.json();
-        setMatches(matchesData);
+        // Transform API response to use teamA/teamB instead of homeTeam/awayTeam
+        const normalizedMatches = matchesData.map((m: any) => ({
+          ...m,
+          teamA: m.teamA || m.homeTeam,
+          teamB: m.teamB || m.awayTeam,
+        }));
+        setMatches(normalizedMatches);
       }
     } catch (error) {
       console.error('Failed to fetch tournament data:', error);

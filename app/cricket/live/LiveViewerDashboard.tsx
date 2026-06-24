@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { getPusherClient } from '@/lib/pusher';
 import { Trophy, User as UserIcon, LogOut, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 import LobbyDashboard from './LobbyDashboard';
-import MatchDetailView from './MatchDetailView';
 import AuthButtons from './AuthButtons';
 import { signOut } from 'next-auth/react';
 
@@ -31,8 +31,8 @@ export default function LiveViewerDashboard({
   user: { id: string; email: string; name?: string; image?: string } | null;
   playerId?: number;
 }) {
+  const router = useRouter();
   const [activeMatches, setActiveMatches] = useState<ActiveMatchSummary[]>([]);
-  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -71,6 +71,10 @@ export default function LiveViewerDashboard({
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: '/cricket/live' });
+  };
+
+  const handleSelectMatch = (matchId: string) => {
+    router.push(`/cricket/live/match/${matchId}`);
   };
 
   return (
@@ -155,18 +159,11 @@ export default function LiveViewerDashboard({
         </div>
       </header>
 
-      {selectedMatchId ? (
-        <MatchDetailView
-          matchId={selectedMatchId}
-          onBackToLobby={() => setSelectedMatchId(null)}
-        />
-      ) : (
-        <LobbyDashboard
-          activeMatches={activeMatches}
-          loading={loading}
-          onSelectMatch={setSelectedMatchId}
-        />
-      )}
+      <LobbyDashboard
+        activeMatches={activeMatches}
+        loading={loading}
+        onSelectMatch={handleSelectMatch}
+      />
     </div>
   );
 }

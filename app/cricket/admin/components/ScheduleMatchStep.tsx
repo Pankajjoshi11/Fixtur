@@ -29,7 +29,13 @@ export default function ScheduleMatchStep({ teams, matches, setMatches, startPre
       <form onSubmit={handleScheduleMatch} className="flex gap-4 items-end mb-8">
         <div className="flex-1">
           <label className="block text-sm text-slate-400 mb-1">Team 1</label>
-          <select required value={selectedTeamA} onChange={e => setSelectedTeamA(e.target.value)} className="w-full p-2 bg-zinc-950 border border-zinc-800 rounded text-slate-200 focus:border-emerald-500">
+          <select 
+            required 
+            value={selectedTeamA} 
+            onChange={e => setSelectedTeamA(e.target.value)} 
+            className="w-full p-2 bg-zinc-950 border border-zinc-800 rounded text-slate-200 focus:border-emerald-500"
+            aria-label="Select Team 1"
+          >
             <option value="">Select Team</option>
             {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
@@ -37,7 +43,13 @@ export default function ScheduleMatchStep({ teams, matches, setMatches, startPre
         <div className="pb-2 font-bold text-slate-500">VS</div>
         <div className="flex-1">
           <label className="block text-sm text-slate-400 mb-1">Team 2</label>
-          <select required value={selectedTeamB} onChange={e => setSelectedTeamB(e.target.value)} className="w-full p-2 bg-zinc-950 border border-zinc-800 rounded text-slate-200 focus:border-emerald-500">
+          <select 
+            required 
+            value={selectedTeamB} 
+            onChange={e => setSelectedTeamB(e.target.value)} 
+            className="w-full p-2 bg-zinc-950 border border-zinc-800 rounded text-slate-200 focus:border-emerald-500"
+            aria-label="Select Team 2"
+          >
             <option value="">Select Team</option>
             {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
@@ -46,14 +58,26 @@ export default function ScheduleMatchStep({ teams, matches, setMatches, startPre
       </form>
 
       <div className="space-y-3">
-        {matches.map(m => (
-          <div key={m.id} className="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-800 rounded">
-            <div className="font-semibold text-lg">{m.teamA.shortName} <span className="text-slate-500 text-sm mx-2">vs</span> {m.teamB.shortName}</div>
-            <button onClick={() => startPreMatch(m)} className="bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 py-1 px-4 rounded text-sm transition-colors">
-              Start Match
-            </button>
-          </div>
-        ))}
+        {matches.map(m => {
+          // Handle both teamA/teamB (local) and homeTeam/awayTeam (from API)
+          const teamA = m.teamA || (m as any).homeTeam;
+          const teamB = m.teamB || (m as any).awayTeam;
+          return (
+            <div key={m.id} className="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-800 rounded">
+              <div className="font-semibold text-lg">
+                {teamA?.shortName || 'TBD'} 
+                <span className="text-slate-500 text-sm mx-2">vs</span> 
+                {teamB?.shortName || 'TBD'}
+              </div>
+              <button 
+                onClick={() => startPreMatch(m)} 
+                className="bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 py-1 px-4 rounded text-sm transition-colors"
+              >
+                Start Match
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
