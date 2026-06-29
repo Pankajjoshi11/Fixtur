@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPusherClient } from '@/lib/pusher';
-import { Trophy, User as UserIcon, LogOut, LayoutDashboard } from 'lucide-react';
+import { Trophy, User as UserIcon, LogOut, LayoutDashboard, UserCog, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import LobbyDashboard from './LobbyDashboard';
 import AuthButtons from './AuthButtons';
@@ -27,9 +27,11 @@ type ActiveMatchSummary = {
 export default function LiveViewerDashboard({
   user,
   playerId,
+  userRole,
 }: {
   user: { id: string; email: string; name?: string; image?: string } | null;
   playerId?: number;
+  userRole?: string;
 }) {
   const router = useRouter();
   const [activeMatches, setActiveMatches] = useState<ActiveMatchSummary[]>([]);
@@ -133,13 +135,33 @@ export default function LiveViewerDashboard({
                     )}
                   </div>
                   <Link
-                    href={`/cricket/live/${playerId || ''}`}
+                    href={`/cricket/live/dashboard/${playerId || ''}`}
                     className="flex items-center gap-2 px-4 py-2 text-sm text-slate-200 hover:bg-zinc-800 transition-colors"
                     onClick={() => setShowUserMenu(false)}
                   >
                     <LayoutDashboard size={16} />
-                    Dashboard
+                    My Stats
                   </Link>
+                  {(userRole === 'HOST' || userRole === 'SUPER_ADMIN') && (
+                    <Link
+                      href="/cricket/host/dashboard"
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-slate-200 hover:bg-zinc-800 transition-colors"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      <Calendar size={16} />
+                      Host Dashboard
+                    </Link>
+                  )}
+                  {userRole === 'USER' && (
+                    <Link
+                      href="/cricket/live/become-host"
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-emerald-400 hover:bg-zinc-800 transition-colors"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      <UserCog size={16} />
+                      Become a Host
+                    </Link>
+                  )}
                   <button
                     onClick={() => {
                       setShowUserMenu(false);

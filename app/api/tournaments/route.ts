@@ -10,6 +10,13 @@ export async function GET() {
           include: {
             players: true
           }
+        },
+        organizer: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
         }
       },
       orderBy: {
@@ -43,7 +50,9 @@ export async function GET() {
         status,
         matchCount: tournament.matches.length,
         teamCount: tournament.teams.length,
-        playerCount: tournament.teams.reduce((acc, team) => acc + team.players.length, 0)
+        playerCount: tournament.teams.reduce((acc, team) => acc + team.players.length, 0),
+        organizerId: tournament.organizerId,
+        organizerName: tournament.organizer?.name || null
       };
     });
 

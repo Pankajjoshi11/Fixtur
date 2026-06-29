@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
+import prisma from "@/lib/prisma";
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
@@ -13,7 +14,6 @@ export async function middleware(req: NextRequest) {
     if (req.nextUrl.pathname.startsWith("/cricket/live/login") || req.nextUrl.pathname.startsWith("/cricket/live/signup")) {
       return NextResponse.next();
     }
-    //return NextResponse.redirect(new URL("/cricket/live/login", req.url));
   }
 
   if (session) {
@@ -23,6 +23,10 @@ export async function middleware(req: NextRequest) {
       requestHeaders.set("x-user-id", payload.userId as string);
       requestHeaders.set("x-user-email", payload.email as string);
 
+      // Removed Prisma call to avoid Edge Runtime error.
+      // The user role can be added to the JWT payload during login if needed.
+      requestHeaders.set("x-user-role", "USER");
+
       return NextResponse.next({
         request: {
           headers: requestHeaders,
@@ -30,7 +34,6 @@ export async function middleware(req: NextRequest) {
       });
     } catch (err) {
       console.error("Invalid token", err);
-      //return NextResponse.redirect(new URL("/cricket/live/login", req.url));
     }
   }
 

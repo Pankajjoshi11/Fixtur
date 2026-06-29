@@ -23,6 +23,13 @@ export async function GET(
             awayTeam: true,
           },
         },
+        organizer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     });
 

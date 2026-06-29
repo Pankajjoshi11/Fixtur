@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getAuthContext } from '@/lib/auth';
 
 export async function POST(req: Request) {
   try {
+    const auth = await getAuthContext(req);
     const { tournament, teams, matches } = await req.json();
 
     if (tournament) {
+      const organizerId = tournament.organizerId || auth?.userId;
+
       await prisma.tournament.upsert({
         where: { id: tournament.id },
         update: {
@@ -22,6 +26,7 @@ export async function POST(req: Request) {
           format: tournament.format,
           numberOfOvers: tournament.overs,
           startDate: new Date(),
+          organizerId: organizerId || null,
         }
       });
     }

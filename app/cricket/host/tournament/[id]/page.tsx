@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ShieldAlert, ArrowLeft, Trophy, Users, Calendar, MapPin, Play, Trash2, UserPlus, Eye } from 'lucide-react';
+import { Trophy, ArrowLeft, Users, Calendar, MapPin, Edit, Trash2, Plus, Play } from 'lucide-react';
 
 interface Tournament {
   id: string;
@@ -14,14 +14,12 @@ interface Tournament {
   numberOfOvers: number | null;
   startDate: string;
   endDate: string | null;
-  setupStep: string;
 }
 
 interface Team {
   id: string;
   name: string;
   shortName: string;
-  logoUrl: string | null;
   players: Player[];
 }
 
@@ -30,6 +28,7 @@ interface Player {
   name: string;
   role: string | null;
   isCaptain: boolean;
+  playerId: number | null;
 }
 
 interface Match {
@@ -38,11 +37,9 @@ interface Match {
   status: string;
   homeTeam: Team;
   awayTeam: Team;
-  tossWinnerId: string | null;
-  tossDecision: string | null;
 }
 
-export default function TournamentDetailPage() {
+export default function HostTournamentDetailPage() {
   const params = useParams();
   const router = useRouter();
   const tournamentId = params.id as string;
@@ -58,22 +55,22 @@ export default function TournamentDetailPage() {
 
   const fetchTournamentData = async () => {
     try {
-      // Fetch tournament details
-      const tournamentRes = await fetch(`/api/tournaments/${tournamentId}`);
+      const [tournamentRes, teamsRes, matchesRes] = await Promise.all([
+        fetch(`/api/host/tournaments/${tournamentId}`),
+        fetch(`/api/host/tournaments/${tournamentId}/teams`),
+        fetch(`/api/tournaments/${tournamentId}/matches`),
+      ]);
+
       if (tournamentRes.ok) {
         const tournamentData = await tournamentRes.json();
         setTournament(tournamentData);
       }
 
-      // Fetch teams
-      const teamsRes = await fetch(`/api/tournaments/${tournamentId}/teams`);
       if (teamsRes.ok) {
         const teamsData = await teamsRes.json();
         setTeams(teamsData);
       }
 
-      // Fetch matches
-      const matchesRes = await fetch(`/api/tournaments/${tournamentId}/matches`);
       if (matchesRes.ok) {
         const matchesData = await matchesRes.json();
         setMatches(matchesData);
@@ -91,12 +88,12 @@ export default function TournamentDetailPage() {
     }
 
     try {
-      const res = await fetch(`/api/tournaments/${tournamentId}`, {
+      const res = await fetch(`/api/host/tournaments/${tournamentId}`, {
         method: 'DELETE',
       });
 
       if (res.ok) {
-        router.push('/cricket/admin/dashboard');
+        router.push('/cricket/host/dashboard');
       } else {
         alert('Failed to delete tournament');
       }
@@ -106,21 +103,28 @@ export default function TournamentDetailPage() {
     }
   };
 
-  const getSetupStepDisplay = (tournament: Tournament, teams: Team[], matches: Match[]) => {
-    // If tournament has a setupStep defined (e.g. from DB), use it
-    if (tournament.setupStep) {
-      return tournament.setupStep.replace(/_/g, ' ');
-    }
-    
-    // Derive setup step based on tournament state
-    if (matches.length > 0) {
-      return 'Matches Scheduled';
-    } else if (teams.length >= 2) {
-      return 'Ready to Schedule';
-    } else if (teams.length === 1) {
-      return 'Creating Teams';
-    } else {
-      return 'Getting Started';
+  const handleAddTeam = async () => {
+    const name = prompt('Enter team name:');
+    if (!name) return;
+
+    const shortName = prompt('Enter short name:');
+    if (!shortName) return;
+
+    try {
+      const res = await fetch(`/api/host/tournaments/${tournamentId}/teams`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, shortName, players: [] }),
+      });
+
+      if (res.ok) {
+        fetchTournamentData();
+      } else {
+        const error = await res.json();
+        alert(error.error || 'Failed to add team');
+      }
+    } catch (error) {
+      alert('Failed to add team');
     }
   };
 
@@ -150,7 +154,7 @@ export default function TournamentDetailPage() {
       <div className="min-h-screen bg-zinc-950 text-slate-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-slate-500 mb-4">Tournament not found</p>
-          <Link href="/cricket/admin/dashboard" className="text-emerald-400 hover:text-emerald-300">
+          <Link href="/cricket/host/dashboard" className="text-emerald-400 hover:text-emerald-300">
             Back to Dashboard
           </Link>
         </div>
@@ -165,10 +169,10 @@ export default function TournamentDetailPage() {
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Link href="/cricket/admin/dashboard" className="text-slate-400 hover:text-white transition-colors">
+              <Link href="/cricket/host/dashboard" className="text-slate-400 hover:text-white transition-colors">
                 <ArrowLeft size={20} />
               </Link>
-              <ShieldAlert className="text-emerald-500" size={28} />
+              <Trophy className="text-emerald-500" size={28} />
               <div>
                 <h1 className="text-xl font-bold text-emerald-500">{tournament.name}</h1>
                 <p className="text-xs text-slate-500">Tournament Management</p>
@@ -176,11 +180,11 @@ export default function TournamentDetailPage() {
             </div>
             <div className="flex items-center gap-3">
               <Link
-                href={`/cricket/admin/tournament/${tournamentId}/setup`}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-medium transition-colors"
+                href={`/cricket/host/tournament/${tournamentId}/edit`}
+                className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium transition-colors"
               >
-                <Play size={16} />
-                Continue Setup
+                <Edit size={16} />
+                Edit
               </Link>
               <button
                 onClick={handleDeleteTournament}
@@ -220,12 +224,6 @@ export default function TournamentDetailPage() {
                 </span>
               </div>
             </div>
-             <div className="text-right">
-               <p className="text-sm text-slate-500">Setup Progress</p>
-               <p className="text-lg font-semibold text-emerald-400 capitalize">
-                 {getSetupStepDisplay(tournament, teams, matches)}
-               </p>
-             </div>
           </div>
         </div>
 
@@ -237,39 +235,35 @@ export default function TournamentDetailPage() {
                 <Users size={20} />
                 Teams ({teams.length})
               </h3>
-              <Link
-                href={`/cricket/admin/tournament/${tournamentId}/setup?step=CREATE_TEAMS`}
+              <button
+                onClick={handleAddTeam}
                 className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-medium transition-colors"
               >
-                <UserPlus size={14} />
-                Add More Teams
-              </Link>
+                <Plus size={14} />
+                Add Team
+              </button>
             </div>
             <div className="divide-y divide-zinc-800">
               {teams.length === 0 ? (
                 <div className="p-6 text-center text-slate-500">
-                  No teams added yet. Click "Add More Teams" to get started.
+                  No teams added yet. Click "Add Team" to get started.
                 </div>
               ) : (
                 teams.map((team) => (
-                  <Link
+                  <div
                     key={team.id}
-                    href={`/cricket/admin/tournament/${tournamentId}/setup?step=CREATE_TEAMS&teamId=${team.id}`}
-                    className="block px-6 py-4 hover:bg-zinc-800/50 transition-colors"
+                    className="px-6 py-4 hover:bg-zinc-800/50 transition-colors"
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium text-slate-200 hover:text-emerald-400 transition-colors">{team.name}</h4>
+                        <h4 className="font-medium text-slate-200">{team.name}</h4>
                         <p className="text-sm text-slate-400">{team.shortName}</p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm text-slate-500">
-                          {team.players.length} players
-                        </span>
-                        <Eye size={16} className="text-slate-400" />
-                      </div>
+                      <span className="text-sm text-slate-500">
+                        {team.players.length} players
+                      </span>
                     </div>
-                  </Link>
+                  </div>
                 ))
               )}
             </div>
@@ -286,7 +280,7 @@ export default function TournamentDetailPage() {
             <div className="divide-y divide-zinc-800">
               {matches.length === 0 ? (
                 <div className="p-6 text-center text-slate-500">
-                  No matches scheduled yet. Continue setup to schedule matches.
+                  No matches scheduled yet.
                 </div>
               ) : (
                 matches.map((match) => (
@@ -300,13 +294,24 @@ export default function TournamentDetailPage() {
                           <p className="text-sm text-slate-400">{match.title}</p>
                         )}
                       </div>
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(
-                          match.status
-                        )}`}
-                      >
-                        {match.status}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(
+                            match.status
+                          )}`}
+                        >
+                          {match.status}
+                        </span>
+                        {match.status === 'SCHEDULED' && (
+                          <Link
+                            href={`/cricket/host/tournament/${tournamentId}/match/${match.id}/start`}
+                            className="p-1.5 text-emerald-400 hover:bg-zinc-700 rounded-lg transition-colors"
+                            title="Start match"
+                          >
+                            <Play size={16} />
+                          </Link>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))

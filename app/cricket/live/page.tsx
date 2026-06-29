@@ -14,6 +14,7 @@ export default function LivePage() {
   } : null;
 
   const playerId = session?.user ? (session.user as any).playerId : undefined;
+  const userRole = session?.user ? (session.user as any).role || 'USER' : 'USER';
 
   if (status === "loading") {
     return (
@@ -23,5 +24,5 @@ export default function LivePage() {
     );
   }
 
-  return <LiveViewerDashboard user={user} playerId={playerId} />;
+  return <LiveViewerDashboard user={user} playerId={playerId} userRole={userRole} />;
 }

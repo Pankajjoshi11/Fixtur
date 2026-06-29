@@ -1,6 +1,3 @@
-import { config } from 'dotenv'
-config({ override: true })
-
 import { PrismaClient } from '@prisma/client'
 
 const prismaClientSingleton = () => {

@@ -5,7 +5,8 @@ export default async function LivePlayerPage({ params }: { params: { playerId: s
   const heads = headers();
   const userId = heads.get('x-user-id');
   const userEmail = heads.get('x-user-email');
+  const userRole = heads.get('x-user-role') || 'USER';
   const user = userId && userEmail ? { id: userId, email: userEmail } : null;
 
-  return <LiveViewerDashboard user={user} playerId={params.playerId} />;
+  return <LiveViewerDashboard user={user} playerId={params.playerId} userRole={userRole} />;
 }
