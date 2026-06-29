@@ -1,57 +1,94 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Trophy, ArrowLeft } from 'lucide-react';
+import { AdminStep, Match, Team } from '../../../admin/types';
 
-type Step = 'CREATE_TOURNAMENT' | 'CREATE_TEAMS' | 'SCHEDULE_MATCH';
+import CreateTournamentStep from '../../../admin/components/CreateTournamentStep';
+import CreateTeamsStep from '../../../admin/components/CreateTeamsStep';
+import ScheduleMatchStep from '../../../admin/components/ScheduleMatchStep';
+import { useScoringStore } from '@/store/useScoringStore';
 
 export default function HostCreateTournamentPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>('CREATE_TOURNAMENT');
+  const store = useScoringStore();
 
-  const [tournament, setTournament] = useState({
-    id: crypto.randomUUID(),
-    name: '',
-    location: '',
-    format: 'T20',
-    overs: 20,
+  const [step, setStep] = useState<AdminStep>('CREATE_TOURNAMENT');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // --- TOURNAMENT STATE ---
+  const [tournament, setTournament] = useState({ 
+    id: '', 
+    name: '', 
+    location: '', 
+    format: 'T20', 
+    overs: 20 
   });
 
-  const [teams, setTeams] = useState<any[]>([]);
-  const [matches, setMatches] = useState<any[]>([]);
+  // --- TEAMS STATE ---
+  const [teams, setTeams] = useState<Team[]>([]);
 
-  const handleCreateTournament = async () => {
+  // --- MATCH SCHEDULE STATE ---
+  const [matches, setMatches] = useState<Match[]>([]);
+
+  // Check authentication on mount
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (!res.ok) {
+        router.push('/cricket/live/login');
+        return;
+      }
+      const data = await res.json();
+      if (data.role !== 'HOST' && data.role !== 'SUPER_ADMIN') {
+        router.push('/cricket/live');
+        return;
+      }
+      setIsLoading(false);
+    } catch (error) {
+      router.push('/cricket/live/login');
+    }
+  };
+
+  // Save tournament to host API
+  const saveTournament = async (tournamentData: any) => {
     try {
       const res = await fetch('/api/host/tournaments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: tournament.name,
-          location: tournament.location,
-          format: tournament.format,
-          numberOfOvers: tournament.overs,
+          name: tournamentData.name,
+          location: tournamentData.location,
+          format: tournamentData.format,
+          numberOfOvers: tournamentData.overs,
         }),
       });
 
       if (res.ok) {
         const data = await res.json();
-        setTournament({ ...tournament, id: data.id });
-        setStep('CREATE_TEAMS');
+        setTournament({ ...tournamentData, id: data.id });
+        return data.id;
       } else {
         const error = await res.json();
-        alert(error.error || 'Failed to create tournament');
+        throw new Error(error.error || 'Failed to create tournament');
       }
     } catch (error) {
-      alert('Failed to create tournament');
+      console.error('Failed to save tournament:', error);
+      throw error;
     }
   };
 
-  const handleSaveTeams = async () => {
+  // Save teams to host API
+  const saveTeams = async (tournamentId: string, teamsData: Team[]) => {
     try {
-      for (const team of teams) {
-        await fetch(`/api/host/tournaments/${tournament.id}/teams`, {
+      for (const team of teamsData) {
+        await fetch(`/api/host/tournaments/${tournamentId}/teams`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -61,28 +98,48 @@ export default function HostCreateTournamentPage() {
           }),
         });
       }
-      setStep('SCHEDULE_MATCH');
     } catch (error) {
-      alert('Failed to save teams');
+      console.error('Failed to save teams:', error);
+      throw error;
     }
   };
 
-  const handleAddTeam = () => {
-    setTeams([
-      ...teams,
-      { id: crypto.randomUUID(), name: '', shortName: '', players: [] },
-    ]);
+  // Handle tournament creation and move to next step
+  const handleTournamentNext = async () => {
+    try {
+      await saveTournament(tournament);
+      setStep('CREATE_TEAMS');
+    } catch (error) {
+      alert('Failed to create tournament. Please try again.');
+    }
   };
 
-  const handleUpdateTeam = (index: number, field: string, value: string) => {
-    const updated = [...teams];
-    updated[index] = { ...updated[index], [field]: value };
-    setTeams(updated);
+  // Handle teams save and move to next step
+  const handleTeamsNext = async () => {
+    if (teams.length < 2) {
+      alert('Please add at least 2 teams');
+      return;
+    }
+    try {
+      await saveTeams(tournament.id, teams);
+      setStep('SCHEDULE_MATCH');
+    } catch (error) {
+      alert('Failed to save teams. Please try again.');
+    }
   };
 
-  const handleRemoveTeam = (index: number) => {
-    setTeams(teams.filter((_, i) => i !== index));
+  // Handle match scheduling completion
+  const handleScheduleComplete = () => {
+    router.push('/cricket/host/dashboard');
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-slate-50 flex items-center justify-center">
+        <p className="text-slate-500">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950 text-slate-50">
@@ -148,148 +205,28 @@ export default function HostCreateTournamentPage() {
       {/* Main Content */}
       <main className="max-w-5xl mx-auto px-4 md:px-8 pb-8">
         {step === 'CREATE_TOURNAMENT' && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-            <h2 className="text-xl font-semibold mb-6">Tournament Details</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">Tournament Name *</label>
-                <input
-                  type="text"
-                  value={tournament.name}
-                  onChange={(e) => setTournament({ ...tournament, name: e.target.value })}
-                  className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500"
-                  placeholder="Enter tournament name"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">Location</label>
-                <input
-                  type="text"
-                  value={tournament.location}
-                  onChange={(e) => setTournament({ ...tournament, location: e.target.value })}
-                  className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500"
-                  placeholder="Enter location"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-1">Format</label>
-                  <select
-                    value={tournament.format}
-                    onChange={(e) => setTournament({ ...tournament, format: e.target.value })}
-                    className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="T20">T20</option>
-                    <option value="ODI">ODI</option>
-                    <option value="Test">Test</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-1">Number of Overs</label>
-                  <input
-                    type="number"
-                    value={tournament.overs}
-                    onChange={(e) => setTournament({ ...tournament, overs: parseInt(e.target.value) || 20 })}
-                    className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-              </div>
-              <button
-                onClick={handleCreateTournament}
-                disabled={!tournament.name}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-700 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
-              >
-                Create Tournament
-              </button>
-            </div>
-          </div>
+          <CreateTournamentStep 
+            tournament={tournament} 
+            setTournament={setTournament} 
+            onNext={handleTournamentNext} 
+          />
         )}
 
         {step === 'CREATE_TEAMS' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Teams ({teams.length})</h2>
-              <button
-                onClick={handleAddTeam}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-medium transition-colors"
-              >
-                Add Team
-              </button>
-            </div>
-
-            {teams.length === 0 ? (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-12 text-center">
-                <Trophy size={48} className="mx-auto text-slate-600 mb-4" />
-                <p className="text-slate-400">No teams added yet. Click "Add Team" to get started.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {teams.map((team, index) => (
-                  <div key={team.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm text-slate-400">Team {index + 1}</span>
-                      <button
-                        onClick={() => handleRemoveTeam(index)}
-                        className="text-red-400 hover:text-red-300 text-sm"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-400 mb-1">Team Name</label>
-                        <input
-                          type="text"
-                          value={team.name}
-                          onChange={(e) => handleUpdateTeam(index, 'name', e.target.value)}
-                          className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500"
-                          placeholder="Team name"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-400 mb-1">Short Name</label>
-                        <input
-                          type="text"
-                          value={team.shortName}
-                          onChange={(e) => handleUpdateTeam(index, 'shortName', e.target.value)}
-                          className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500"
-                          placeholder="e.g., CSK"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <button
-              onClick={handleSaveTeams}
-              disabled={teams.length < 2}
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-700 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
-            >
-              Save Teams & Continue
-            </button>
-          </div>
+          <CreateTeamsStep 
+            teams={teams} 
+            setTeams={setTeams} 
+            onNext={handleTeamsNext} 
+          />
         )}
 
         {step === 'SCHEDULE_MATCH' && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-            <h2 className="text-xl font-semibold mb-6">Schedule Matches</h2>
-            <p className="text-slate-400 mb-4">
-              You have {teams.length} teams. Create matches by pairing them up.
-            </p>
-            <div className="text-center py-8">
-              <p className="text-slate-500">
-                Match scheduling coming soon. For now, you can view your tournament in the dashboard.
-              </p>
-              <button
-                onClick={() => router.push('/cricket/host/dashboard')}
-                className="mt-4 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-medium transition-colors"
-              >
-                Go to Dashboard
-              </button>
-            </div>
-          </div>
+          <ScheduleMatchStep 
+            teams={teams} 
+            matches={matches} 
+            setMatches={setMatches}
+            startPreMatch={handleScheduleComplete}
+          />
         )}
       </main>
     </div>
