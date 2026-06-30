@@ -128,9 +128,9 @@ export default function HostCreateTournamentPage() {
     }
   };
 
-  // Handle match scheduling completion
+  // Handle match scheduling completion - navigate to tournament setup
   const handleScheduleComplete = () => {
-    router.push('/cricket/host/dashboard');
+    router.push(`/cricket/host/tournament/${tournament.id}/setup`);
   };
 
   if (isLoading) {

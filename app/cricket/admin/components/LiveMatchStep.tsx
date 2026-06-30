@@ -88,10 +88,10 @@ export default function LiveMatchStep({ activeMatch, tournament, battingTeam, bo
     }
   };
 
-  useEffect(() => {
+   useEffect(() => {
       const isOverComplete = store.ballsInCurrentOver === 0 && store.overs > 0 && store.deliveryHistory.length > 0;
       const isAllOut = store.totalWickets >= 10;
-      const isOversFinished = store.overs >= tournament.overs;
+      const isOversFinished = store.overs >= (tournament?.overs || 20);
       
       const lastDelivery = store.deliveryHistory[store.deliveryHistory.length - 1];
 
@@ -120,7 +120,7 @@ export default function LiveMatchStep({ activeMatch, tournament, battingTeam, bo
       } else if (isOverComplete && lastDelivery && lastDelivery.isLegalDelivery && !isOversFinished && !isAllOut) {
          setShowOverModal(true);
       }
-  }, [store.overs, store.ballsInCurrentOver, store.deliveryHistory, store.totalWickets, store.totalRuns, tournament.overs, store.currentInning, showInningsModal, store.targetScore, showMatchCompleteModal, store.matchVerdict, battingTeam, bowlingTeam]);
+   }, [store.overs, store.ballsInCurrentOver, store.deliveryHistory, store.totalWickets, store.totalRuns, tournament?.overs, store.currentInning, showInningsModal, store.targetScore, showMatchCompleteModal, store.matchVerdict, battingTeam, bowlingTeam]);
 
   const handleNextOverSetup = () => {
     store.setStateOverride({
@@ -292,11 +292,11 @@ export default function LiveMatchStep({ activeMatch, tournament, battingTeam, bo
               <h2 className="text-2xl font-bold text-red-500 mb-4 text-center">Wicket Fallen!</h2>
               <div className="space-y-4 max-w-sm mx-auto w-full">
                 <div>
-                  <label className="block text-sm text-slate-400 mb-1">Select New Batsman</label>
-                  <select value={newBatsmanId} onChange={e => setNewBatsmanId(e.target.value)} className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded text-slate-200">
+                  <label htmlFor="newBatsman" className="block text-sm text-slate-400 mb-1">Select New Batsman</label>
+                  <select id="newBatsman" value={newBatsmanId} onChange={e => setNewBatsmanId(e.target.value)} className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded text-slate-200" aria-label="Select new batsman">
                      <option value="">Select Batsman</option>
                      {battingTeam?.players
-                       .filter(p => p.id !== store.nonStrikerId && p.id !== store.strikerId) // Don't show current non-striker or the out striker
+                       .filter(p => p.id !== store.nonStrikerId && p.id !== store.strikerId)
                        .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </div>
@@ -317,8 +317,8 @@ export default function LiveMatchStep({ activeMatch, tournament, battingTeam, bo
               <h2 className="text-2xl font-bold text-emerald-400 mb-4 text-center">Over Completed</h2>
               <div className="space-y-4 max-w-sm mx-auto w-full">
                 <div>
-                  <label className="block text-sm text-slate-400 mb-1">Select Next Bowler</label>
-                  <select value={nextBowlerId} onChange={e => setNextBowlerId(e.target.value)} className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded text-slate-200">
+                  <label htmlFor="nextBowler" className="block text-sm text-slate-400 mb-1">Select Next Bowler</label>
+                  <select id="nextBowler" value={nextBowlerId} onChange={e => setNextBowlerId(e.target.value)} className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded text-slate-200" aria-label="Select next bowler">
                      <option value="">Select Bowler</option>
                      {bowlingTeam?.players.filter(p => p.id !== store.bowlerId).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
@@ -326,15 +326,15 @@ export default function LiveMatchStep({ activeMatch, tournament, battingTeam, bo
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-slate-400 mb-1">Striker</label>
-                    <select value={nextStrikerId} onChange={e => setNextStrikerId(e.target.value)} className="w-full p-2 bg-zinc-900 border border-zinc-800 rounded text-sm text-slate-200">
+                    <label htmlFor="nextStriker" className="block text-sm text-slate-400 mb-1">Striker</label>
+                    <select id="nextStriker" value={nextStrikerId} onChange={e => setNextStrikerId(e.target.value)} className="w-full p-2 bg-zinc-900 border border-zinc-800 rounded text-sm text-slate-200" aria-label="Select striker">
                        <option value="">Select</option>
                        {battingTeam?.players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm text-slate-400 mb-1">Non-Striker</label>
-                    <select value={nextNonStrikerId} onChange={e => setNextNonStrikerId(e.target.value)} className="w-full p-2 bg-zinc-900 border border-zinc-800 rounded text-sm text-slate-200">
+                    <label htmlFor="nextNonStriker" className="block text-sm text-slate-400 mb-1">Non-Striker</label>
+                    <select id="nextNonStriker" value={nextNonStrikerId} onChange={e => setNextNonStrikerId(e.target.value)} className="w-full p-2 bg-zinc-900 border border-zinc-800 rounded text-sm text-slate-200" aria-label="Select non-striker">
                        <option value="">Select</option>
                        {battingTeam?.players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
@@ -358,8 +358,8 @@ export default function LiveMatchStep({ activeMatch, tournament, battingTeam, bo
               <h2 className="text-2xl font-bold text-emerald-400 mb-4 text-center">Innings Completed</h2>
               <div className="space-y-4 max-w-sm mx-auto w-full">
                 <div>
-                  <label className="block text-sm text-slate-400 mb-1">Select Next Bowler</label>
-                  <select value={nextBowlerId} onChange={e => setNextBowlerId(e.target.value)} className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded text-slate-200">
+                  <label htmlFor="inningsBowler" className="block text-sm text-slate-400 mb-1">Select Next Bowler</label>
+                  <select id="inningsBowler" value={nextBowlerId} onChange={e => setNextBowlerId(e.target.value)} className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded text-slate-200" aria-label="Select next bowler for second innings">
                      <option value="">Select Bowler</option>
                      {battingTeam?.players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
@@ -367,15 +367,15 @@ export default function LiveMatchStep({ activeMatch, tournament, battingTeam, bo
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-slate-400 mb-1">Striker</label>
-                    <select value={nextStrikerId} onChange={e => setNextStrikerId(e.target.value)} className="w-full p-2 bg-zinc-900 border border-zinc-800 rounded text-sm text-slate-200">
+                    <label htmlFor="inningsStriker" className="block text-sm text-slate-400 mb-1">Striker</label>
+                    <select id="inningsStriker" value={nextStrikerId} onChange={e => setNextStrikerId(e.target.value)} className="w-full p-2 bg-zinc-900 border border-zinc-800 rounded text-sm text-slate-200" aria-label="Select striker for second innings">
                        <option value="">Select</option>
                        {bowlingTeam?.players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm text-slate-400 mb-1">Non-Striker</label>
-                    <select value={nextNonStrikerId} onChange={e => setNextNonStrikerId(e.target.value)} className="w-full p-2 bg-zinc-900 border border-zinc-800 rounded text-sm text-slate-200">
+                    <label htmlFor="inningsNonStriker" className="block text-sm text-slate-400 mb-1">Non-Striker</label>
+                    <select id="inningsNonStriker" value={nextNonStrikerId} onChange={e => setNextNonStrikerId(e.target.value)} className="w-full p-2 bg-zinc-900 border border-zinc-800 rounded text-sm text-slate-200" aria-label="Select non-striker for second innings">
                        <option value="">Select</option>
                        {bowlingTeam?.players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
